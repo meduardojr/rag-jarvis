@@ -40,7 +40,7 @@ const MODELS = [
 ] as const;
 
 export function SettingsPanel() {
-  const { theme, setTheme, verifyPassword, isPasswordVerified } = useJarvis();
+  const { theme, setTheme, verifyPassword, isPasswordVerified, logout } = useJarvis();
   const [password, setPassword] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [defaultModel, setDefaultModel] = useState('gemini-flash');
@@ -101,43 +101,65 @@ export function SettingsPanel() {
           <ShieldCheck className="h-4 w-4 text-indigo-500" />
           <h3 className="text-sm font-semibold text-foreground/90">Security</h3>
         </div>
-        <div className="space-y-2">
-          <Input
-            type="password"
-            placeholder="Enter password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleVerifyPassword()}
-            className="glass-panel-hover"
-          />
-          <Button
-            onClick={handleVerifyPassword}
-            disabled={isVerifying}
-            className="w-full ai-primary"
-            size="sm"
-          >
-            {isVerifying ? (
-              <>
-                <Lock className="h-4 w-4 mr-2 animate-spin" />
-                Verifying...
-              </>
-            ) : (
-              <>
-                <Lock className="h-4 w-4 mr-2" />
-                Verify Password
-              </>
-            )}
-          </Button>
-          {isPasswordVerified ? (
-            <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
-              <Check className="h-3 w-3" /> Verified for this session
+        {isPasswordVerified ? (
+          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 space-y-3">
+            <div className="flex items-start gap-2.5">
+              <div className="mt-0.5 rounded-full bg-emerald-500/20 p-1.5">
+                <Check className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-300" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+                  Session unlocked
+                </p>
+                <p className="mt-0.5 text-xs text-emerald-700/80 dark:text-emerald-200/70">
+                  Your password is verified. Protected actions and paid models are available.
+                </p>
+              </div>
             </div>
-          ) : (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={logout}
+              className="w-full border-emerald-500/30 bg-background/50 hover:bg-emerald-500/10"
+            >
+              <Lock className="mr-2 h-3.5 w-3.5" />
+              Lock session
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <Input
+              type="password"
+              placeholder="Enter password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleVerifyPassword()}
+              className="glass-panel-hover"
+            />
+            <Button
+              onClick={handleVerifyPassword}
+              disabled={isVerifying}
+              className="w-full ai-primary"
+              size="sm"
+            >
+              {isVerifying ? (
+                <>
+                  <Lock className="h-4 w-4 mr-2 animate-spin" />
+                  Verifying...
+                </>
+              ) : (
+                <>
+                  <Lock className="h-4 w-4 mr-2" />
+                  Verify Password
+                </>
+              )}
+            </Button>
             <p className="text-xs text-muted-foreground">
               Required for: editing knowledge base & using paid models
             </p>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Model Settings */}
