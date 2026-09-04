@@ -1,151 +1,210 @@
-import { NextResponse } from 'next/server';
-import { sql } from '@/lib/db';
-import { verifySession, getSessionFromRequest } from '@/lib/auth';
-import { getEmbedding } from '@/lib/embeddings';
+import { sql } from '@/db';
+import { NextRequest, NextResponse } from 'next/server';
 
-export async function GET(request: Request) {
+// GET - Fetch all knowledge entries
+export async function GET() {
   try {
-    const knowledgeEntries = await sql`
-      SELECT id, title, content, tag, source_type, created_at, updated_at
+    const entries = await sql`
+      SELECT id, title, content, category, tags, source_type, created_at, updated_at
       FROM knowledge_entries
       ORDER BY created_at DESC
     `;
-    return NextResponse.json(knowledgeEntries);
+    return NextResponse.json(entries);
   } catch (error) {
     console.error('Error fetching knowledge entries:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to fetch knowledge entries' },
+      { status: 500 }
+    );
   }
 }
 
-export async function POST(request: Request) {
-  // Verify password for creating a knowledge entry
-  const session = getSessionFromRequest(request);
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
+// POST - Create a new knowledge entry with automatic chunking
+export async function POST(request: NextRequest) {
   try {
-    const { title, content, tag, source_type = 'manual' } = await request.json();
+    const body = await request.json();
+    const { title, content, category, tags = [], source_type = 'manual' } = body;
 
     if (!title || !content) {
-      return NextResponse.json({ error: 'Title and content are required' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Title and content are required' },
+        { status: 400 }
+      );
     }
 
-    // Insert the knowledge entry
+    // Create the knowledge entry
     const [entry] = await sql`
-      INSERT INTO knowledge_entries (title, content, tag, source_type)
-      VALUES (${title}, ${content}, ${tag}, ${source_type})
-      RETURNING id, title, content, tag, source_type, created_at, updated_at
+      INSERT INTO knowledge_entries (title, content, category, tags, source_type)
+      VALUES (${title}, ${content}, ${category || 'Stack'}, ${tags}, ${source_type})
+      RETURNING id, title, content, category, tags, source_type, created_at, updated_at
     `;
 
-    // Now, create chunks and embeddings
-    // We'll split the content into chunks of ~400 tokens. For simplicity, we'll split by paragraphs.
-    const paragraphs = content.split('\n\n').filter((p: string) => p.trim() !== '');
-    let chunkIndex = 0;
-    for (const paragraph of paragraphs) {
-      try {
-        const embedding = await getEmbedding(paragraph);
-        await sql`
-          INSERT INTO chunks (entry_id, chunk_text, embedding_vector, chunk_index)
-          VALUES (${entry.id}, ${paragraph}, ${embedding}, ${chunkIndex})
-        `;
-        chunkIndex++;
-      } catch (embedError) {
-        console.error('Error embedding chunk:', embedError);
-        // Continue with other chunks
-      }
+    // Chunk the content (simple fixed-size chunking ~400 tokens)
+    const chunks = chunkText(content, 400);
+    
+    // Generate embeddings and store chunks
+    for (let i = 0; i < chunks.length; i++) {
+      const embedding = await generateEmbedding(chunks[i]);
+      
+      await sql`
+        INSERT INTO chunks (entry_id, chunk_text, chunk_index, embedding)
+        VALUES (${entry.id}, ${chunks[i]}, ${i}, ${embedding}::vector)
+      `;
     }
 
     return NextResponse.json(entry, { status: 201 });
   } catch (error) {
     console.error('Error creating knowledge entry:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to create knowledge entry' },
+      { status: 500 }
+    );
   }
 }
 
-export async function PUT(request: Request) {
-  // Verify password for updating a knowledge entry
-  const session = getSessionFromRequest(request);
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
+// PUT - Update a knowledge entry
+export async function PUT(request: NextRequest) {
   try {
-    const { id, title, content, tag, source_type } = await request.json();
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
 
-    if (!id || !title || !content) {
-      return NextResponse.json({ error: 'ID, title, and content are required' }, { status: 400 });
+    if (!id) {
+      return NextResponse.json(
+        { error: 'Entry ID is required' },
+        { status: 400 }
+      );
     }
 
-    // Update the knowledge entry
+    const body = await request.json();
+    const { title, content, category, tags } = body;
+
     const [entry] = await sql`
       UPDATE knowledge_entries
-      SET title = ${title}, content = ${content}, tag = ${tag}, source_type = ${source_type}, updated_at = CURRENT_TIMESTAMP
+      SET 
+        title = COALESCE(${title}, title),
+        content = COALESCE(${content}, content),
+        category = COALESCE(${category}, category),
+        tags = COALESCE(${tags}, tags)
       WHERE id = ${id}
-      RETURNING id, title, content, tag, source_type, created_at, updated_at
+      RETURNING id, title, content, category, tags, source_type, created_at, updated_at
     `;
 
     if (!entry) {
-      return NextResponse.json({ error: 'Knowledge entry not found' }, { status: 404 });
+      return NextResponse.json(
+        { error: 'Entry not found' },
+        { status: 404 }
+      );
     }
 
-    // Delete existing chunks for this entry
-    await sql`DELETE FROM chunks WHERE entry_id = ${id}`;
+    // Re-chunk and update embeddings if content changed
+    if (content) {
+      // Delete existing chunks
+      await sql`DELETE FROM chunks WHERE entry_id = ${id}`;
 
-    // Create new chunks and embeddings
-    const paragraphs = content.split('\n\n').filter((p: string) => p.trim() !== '');
-    let chunkIndex = 0;
-    for (const paragraph of paragraphs) {
-      try {
-        const embedding = await getEmbedding(paragraph);
+      // Re-chunk the content
+      const chunks = chunkText(content, 400);
+      
+      for (let i = 0; i < chunks.length; i++) {
+        const embedding = await generateEmbedding(chunks[i]);
+        
         await sql`
-          INSERT INTO chunks (entry_id, chunk_text, embedding_vector, chunk_index)
-          VALUES (${id}, ${paragraph}, ${embedding}, ${chunkIndex})
+          INSERT INTO chunks (entry_id, chunk_text, chunk_index, embedding)
+          VALUES (${id}, ${chunks[i]}, ${i}, ${embedding}::vector)
         `;
-        chunkIndex++;
-      } catch (embedError) {
-        console.error('Error embedding chunk:', embedError);
-        // Continue with other chunks
       }
     }
 
     return NextResponse.json(entry);
   } catch (error) {
     console.error('Error updating knowledge entry:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to update knowledge entry' },
+      { status: 500 }
+    );
   }
 }
 
-export async function DELETE(request: Request) {
-  // Verify password for deleting a knowledge entry
-  const session = getSessionFromRequest(request);
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
+// DELETE - Delete a knowledge entry
+export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 
     if (!id) {
-      return NextResponse.json({ error: 'ID is required' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Entry ID is required' },
+        { status: 400 }
+      );
     }
 
-    // Delete the knowledge entry and its chunks
-    await sql`DELETE FROM chunks WHERE entry_id = ${id}`;
-    const result = await sql`
-      DELETE FROM knowledge_entries
-      WHERE id = ${id}
-      RETURNING id
-    `;
-
-    if (result.length === 0) {
-      return NextResponse.json({ error: 'Knowledge entry not found' }, { status: 404 });
-    }
+    await sql`DELETE FROM knowledge_entries WHERE id = ${id}`;
 
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error deleting knowledge entry:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to delete knowledge entry' },
+      { status: 500 }
+    );
+  }
+}
+
+// Helper function to chunk text
+function chunkText(text: string, maxTokens: number): string[] {
+  // Rough estimate: 1 token ≈ 4 characters for English text
+  const maxChars = maxTokens * 4;
+  const chunks: string[] = [];
+  
+  // Split by double newlines (paragraphs) first
+  const paragraphs = text.split(/\n\n+/);
+  let currentChunk = '';
+  
+  for (const paragraph of paragraphs) {
+    if ((currentChunk + paragraph).length > maxChars && currentChunk.length > 0) {
+      chunks.push(currentChunk.trim());
+      currentChunk = paragraph;
+    } else {
+      currentChunk += (currentChunk ? '\n\n' : '') + paragraph;
+    }
+  }
+  
+  if (currentChunk.trim()) {
+    chunks.push(currentChunk.trim());
+  }
+  
+  return chunks.length > 0 ? chunks : [text];
+}
+
+// Helper function to generate embeddings using OpenAI
+async function generateEmbedding(text: string): Promise<number[]> {
+  const apiKey = process.env.OPENAI_API_KEY;
+  
+  if (!apiKey) {
+    console.warn('OpenAI API key not found, using zero embeddings');
+    return new Array(1536).fill(0);
+  }
+
+  try {
+    const response = await fetch('https://api.openai.com/v1/embeddings', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'text-embedding-3-small',
+        input: text,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`OpenAI API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.data[0].embedding;
+  } catch (error) {
+    console.error('Error generating embedding:', error);
+    return new Array(1536).fill(0);
   }
 }

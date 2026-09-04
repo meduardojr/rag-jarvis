@@ -1,42 +1,71 @@
-import { NextResponse } from 'next/server';
-import { sql } from '@/lib/db';
+import { sql } from '@/db';
+import { NextRequest, NextResponse } from 'next/server';
 
-export async function GET(request: Request) {
+// GET - Fetch app settings
+export async function GET() {
   try {
-    const [settings] = await sql`
-      SELECT theme
+    const settings = await sql`
+      SELECT 
+        theme,
+        default_model,
+        embedding_model,
+        session_timeout_minutes,
+        auto_pick_threshold,
+        min_sample_size
       FROM app_settings
-      LIMIT 1
+      WHERE id = 1
     `;
 
-    if (!settings) {
-      // Default theme
-      return NextResponse.json({ theme: 'system' });
+    if (settings.length === 0) {
+      // Create default settings if they don't exist
+      await sql`
+        INSERT INTO app_settings (id, theme, default_model, embedding_model)
+        VALUES (1, 'system', 'gemini-2.0-flash', 'text-embedding-3-small')
+      `;
+      return NextResponse.json({
+        theme: 'system',
+        default_model: 'gemini-2.0-flash',
+        embedding_model: 'text-embedding-3-small',
+        session_timeout_minutes: 30,
+        auto_pick_threshold: 0.90,
+        min_sample_size: 5,
+      });
     }
 
-    return NextResponse.json({ theme: settings.theme });
+    return NextResponse.json(settings[0]);
   } catch (error) {
     console.error('Error fetching settings:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to fetch settings' },
+      { status: 500 }
+    );
   }
 }
 
-export async function PUT(request: Request) {
+// PUT - Update app settings
+export async function PUT(request: NextRequest) {
   try {
-    const { theme } = await request.json();
+    const body = await request.json();
+    const { theme, default_model, session_timeout_minutes, auto_pick_threshold, min_sample_size } = body;
 
-    if (!theme || !['light', 'dark', 'system'].includes(theme)) {
-      return NextResponse.json({ error: 'Invalid theme' }, { status: 400 });
-    }
-
-    await sql`
+    const [settings] = await sql`
       UPDATE app_settings
-      SET theme = ${theme}, updated_at = CURRENT_TIMESTAMP
+      SET 
+        theme = COALESCE(${theme}, theme),
+        default_model = COALESCE(${default_model}, default_model),
+        session_timeout_minutes = COALESCE(${session_timeout_minutes}, session_timeout_minutes),
+        auto_pick_threshold = COALESCE(${auto_pick_threshold}, auto_pick_threshold),
+        min_sample_size = COALESCE(${min_sample_size}, min_sample_size)
+      WHERE id = 1
+      RETURNING theme, default_model, embedding_model, session_timeout_minutes, auto_pick_threshold, min_sample_size
     `;
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json(settings);
   } catch (error) {
     console.error('Error updating settings:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to update settings' },
+      { status: 500 }
+    );
   }
 }

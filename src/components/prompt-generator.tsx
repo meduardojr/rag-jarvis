@@ -73,20 +73,16 @@ export function PromptGenerator() {
     setIsGenerating(true);
     setError(null);
     try {
-      // Call the generate-prompt API endpoint
-      const response = await fetch('/api/generate-prompt', {
+      // Call the chat API endpoint
+      const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          user_query: query,
+          query,
           target_tool: targetTool,
-          model: targetTool === 'claude' ? 'claude-3-5-sonnet-20241022' : 
-                 targetTool === 'copilot' ? 'gpt-4o' : 
-                 targetTool === 'bolt' ? 'bolt-default' :
-                 targetTool === 'v0' ? 'v0-dev-model' :
-                 targetTool === 'cursor' ? 'cursor-default' : 'general-llm',
+          model: 'gemini-2.0-flash', // Default to free model
         }),
       });
 
@@ -97,21 +93,21 @@ export function PromptGenerator() {
 
       const result = await response.json();
 
-      if (result.isOutOfScope) {
+      if (result.out_of_scope) {
         setGeneratedPrompt(result.message);
         setRetrievedChunks([]);
-        toast.warning(result.message);
+        toast.warning(result.suggestion || result.message);
         return;
       }
 
-      setGeneratedPrompt(result.generatedPrompt);
+      setGeneratedPrompt(result.generated_prompt);
       setRetrievedChunks(
-        result.usedChunks.map((chunk: any) => ({
+        result.retrieved_sources?.map((chunk: any) => ({
           id: chunk.id,
           title: chunk.title || `Chunk ${chunk.id}`,
-          content: chunk.text,
+          content: chunk.excerpt,
           similarity: chunk.similarity,
-        }))
+        })) || []
       );
 
       // Save to history via the provider
@@ -119,9 +115,10 @@ export function PromptGenerator() {
         id: Date.now(),
         query,
         targetTool: selectedTool?.label || targetTool,
-        modelUsed: targetTool,
-        generatedOutput: result.generatedPrompt,
-        retrievedChunkIds: result.usedChunks.map((c: any) => c.id),
+        modelUsed: result.model_used,
+        modelTier: result.model_tier,
+        generatedOutput: result.generated_prompt,
+        retrievedChunkIds: result.retrieved_sources?.map((c: any) => c.id) || [],
         createdAt: new Date(),
       });
 

@@ -1,55 +1,73 @@
-import { NextResponse } from 'next/server';
-import { sql } from '@/lib/db';
-import { hashPassword, verifyPassword, createSession } from '@/lib/auth';
+import { sql } from '@/db';
+import { NextRequest, NextResponse } from 'next/server';
 
-export async function POST(request: Request) {
+// POST - Verify password and create session
+export async function POST(request: NextRequest) {
   try {
     const { password } = await request.json();
 
     if (!password) {
-      return NextResponse.json({ error: 'Password is required' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Password is required' },
+        { status: 400 }
+      );
     }
 
-    // Check if password is already set
-    const storedHash = await sql`SELECT id, password_hash FROM app_settings LIMIT 1`;
+    // Get the stored password hash from settings
+    const settings = await sql`
+      SELECT password_hash, session_timeout_minutes FROM app_settings WHERE id = 1
+    `;
 
-    if (storedHash.length > 0) {
-      // Password is set, verify it
-      const isValid = await verifyPassword(password, storedHash[0].password_hash);
-      if (!isValid) {
-        return NextResponse.json({ error: 'Invalid password' }, { status: 401 });
-      }
-    } else {
-      // No password set yet, create one
-      // First, check if the app_settings table has any rows at all
-      const countResult = await sql`SELECT COUNT(*) as count FROM app_settings`;
-      if (Number(countResult[0].count) === 0) {
-        // Insert with explicit nextval for the sequence
-        const hashedPassword = await hashPassword(password);
-        await sql`INSERT INTO app_settings (id, password_hash) VALUES (nextval('app_settings_id_seq'), ${hashedPassword})`;
-      } else {
-        // Update the existing row (assuming there's only one row)
-        const hashedPassword = await hashPassword(password);
-        await sql`UPDATE app_settings SET password_hash = ${hashedPassword}, updated_at = CURRENT_TIMESTAMP`;
-      }
+    if (settings.length === 0 || !settings[0].password_hash) {
+      return NextResponse.json(
+        { error: 'Password not configured. Please set a password first.' },
+        { status: 401 }
+      );
     }
 
-    // Create a session
-    const sessionToken = createSession(1);
+    // For development, we'll use a simple comparison
+    // In production, use bcrypt for hashing
+    const storedHash = settings[0].password_hash;
+    const isValid = await verifyPassword(password, storedHash);
 
-    // Set the session cookie
+    if (!isValid) {
+      return NextResponse.json(
+        { error: 'Invalid password' },
+        { status: 401 }
+      );
+    }
+
+    // Create session cookie
+    const sessionTimeout = settings[0].session_timeout_minutes || 30;
+    const expires = new Date(Date.now() + sessionTimeout * 60 * 1000);
+    
     const response = NextResponse.json({ success: true });
-    response.cookies.set('jarvis-session', sessionToken, {
+    response.cookies.set('jarvis-session', 'verified', {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 30 * 60, // 30 minutes
+      sameSite: 'lax',
+      expires,
       path: '/',
     });
 
     return response;
   } catch (error) {
     console.error('Error verifying password:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Password verification failed' },
+      { status: 500 }
+    );
   }
+}
+
+// Helper function to verify password
+async function verifyPassword(password: string, hash: string): Promise<boolean> {
+  // For development, support plain text comparison
+  // TODO: Implement bcrypt verification in production
+  if (hash.startsWith("$2")) {
+    // Use bcrypt if hash is bcrypt formatted
+    const bcrypt = await import("bcryptjs");
+    return await bcrypt.compare(password, hash);
+  }
+  return password === hash;
 }
