@@ -25,14 +25,14 @@ const JarvisContext = createContext<JarvisContextType | undefined>(undefined);
 
 export function JarvisProvider({ children }: { children: ReactNode }) {
   const [isPasswordVerified, setPasswordVerified] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [knowledgeEntries, setKnowledgeEntries] = useState<Array<any>>([]);
   const [generatedPrompts, setGeneratedPrompts] = useState<Array<any>>([]);
   const [theme, setThemeState] = useState<'light' | 'dark' | 'system'>('system');
 
   const loadData = async () => {
-    setIsLoading(true);
+    setIsLoading(false);
     setError(null);
 
     const results = await Promise.all([
@@ -41,9 +41,7 @@ export function JarvisProvider({ children }: { children: ReactNode }) {
       loadTheme(),
     ]);
 
-    if (results.every(Boolean)) {
-      setIsLoading(false);
-    }
+    setIsLoading(!results.every(Boolean));
   };
 
   useEffect(() => {
