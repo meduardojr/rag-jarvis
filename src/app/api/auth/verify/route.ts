@@ -18,10 +18,7 @@ export async function POST(request: NextRequest) {
     `;
 
     if (settings.length === 0 || !settings[0]?.password_hash) {
-      return NextResponse.json(
-        { error: 'Password not configured. Please set a password first.' },
-        { status: 401 }
-      );
+      return NextResponse.json({ success: false, configured: false });
     }
 
     const isValid = await verifyPassword(password, settings[0].password_hash as string);

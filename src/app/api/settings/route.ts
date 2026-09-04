@@ -21,6 +21,7 @@ export async function GET() {
       await sql`
         INSERT INTO app_settings (id, theme, default_model, embedding_model)
         VALUES (1, 'system', 'gemini-2.0-flash', 'text-embedding-3-small')
+        ON CONFLICT (id) DO NOTHING
       `;
       return NextResponse.json({
         theme: 'system',
@@ -49,18 +50,33 @@ export async function PUT(request: NextRequest) {
     const { theme, default_model, session_timeout_minutes, auto_pick_threshold, min_sample_size } = body;
 
     const [settings] = await sql`
-      UPDATE app_settings
-      SET 
-        theme = COALESCE(${theme}, theme),
-        default_model = COALESCE(${default_model}, default_model),
-        session_timeout_minutes = COALESCE(${session_timeout_minutes}, session_timeout_minutes),
-        auto_pick_threshold = COALESCE(${auto_pick_threshold}, auto_pick_threshold),
-        min_sample_size = COALESCE(${min_sample_size}, min_sample_size)
-      WHERE id = 1
+      INSERT INTO app_settings (
+        id,
+        theme,
+        default_model,
+        session_timeout_minutes,
+        auto_pick_threshold,
+        min_sample_size
+      )
+      VALUES (
+        1,
+        COALESCE(${theme}, 'system'),
+        COALESCE(${default_model}, 'gemini-2.0-flash'),
+        COALESCE(${session_timeout_minutes}, 30),
+        COALESCE(${auto_pick_threshold}, 0.90),
+        COALESCE(${min_sample_size}, 5)
+      )
+      ON CONFLICT (id) DO UPDATE SET
+        theme = COALESCE(${theme}, app_settings.theme),
+        default_model = COALESCE(${default_model}, app_settings.default_model),
+        session_timeout_minutes = COALESCE(${session_timeout_minutes}, app_settings.session_timeout_minutes),
+        auto_pick_threshold = COALESCE(${auto_pick_threshold}, app_settings.auto_pick_threshold),
+        min_sample_size = COALESCE(${min_sample_size}, app_settings.min_sample_size),
+        updated_at = NOW()
       RETURNING theme, default_model, embedding_model, session_timeout_minutes, auto_pick_threshold, min_sample_size
     `;
 
-    return NextResponse.json(settings);
+    return NextResponse.json(settings ?? null);
   } catch (error) {
     console.error('Error updating settings:', error);
     return NextResponse.json(

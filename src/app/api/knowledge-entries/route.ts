@@ -40,6 +40,10 @@ export async function POST(request: NextRequest) {
       RETURNING id, title, content, category, tags, source_type, created_at, updated_at
     `;
 
+    if (!entry) {
+      return NextResponse.json(null, { status: 200 });
+    }
+
     // Chunk the content (simple fixed-size chunking ~400 tokens)
     const chunks = chunkText(content, 400);
     
@@ -91,10 +95,7 @@ export async function PUT(request: NextRequest) {
     `;
 
     if (!entry) {
-      return NextResponse.json(
-        { error: 'Entry not found' },
-        { status: 404 }
-      );
+      return NextResponse.json(null);
     }
 
     // Re-chunk and update embeddings if content changed

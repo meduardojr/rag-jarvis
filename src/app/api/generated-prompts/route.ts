@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
       RETURNING id, user_query, target_tool, model_used, model_tier, retrieved_chunk_ids, generated_output, created_at
     `;
 
-    return NextResponse.json(prompt, { status: 201 });
+    return NextResponse.json(prompt ?? null, { status: prompt ? 201 : 200 });
   } catch (error) {
     console.error('Error creating generated prompt:', error);
     return NextResponse.json(

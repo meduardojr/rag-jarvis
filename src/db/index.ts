@@ -24,7 +24,7 @@ function getClient(): (strings: TemplateStringsArray, ...values: unknown[]) => S
 // Tagged template function - lazily initializes the client
 // Usage: await sql`SELECT * FROM users`
 export function sql(strings: TemplateStringsArray, ...values: unknown[]): SqlResult {
-  return getClient()(strings, values);
+  return getClient()(strings, ...values);
 }
 
 // IMPORTANT: Only use this in server-side code (API routes, server actions, server components).

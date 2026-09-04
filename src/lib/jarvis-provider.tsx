@@ -34,16 +34,14 @@ export function JarvisProvider({ children }: { children: ReactNode }) {
   const loadData = async () => {
     setIsLoading(true);
     setError(null);
-    
-    try {
-      await Promise.all([
-        loadKnowledgeEntries(),
-        loadGeneratedPrompts(),
-        loadTheme(),
-      ]);
-    } catch (err) {
-      setError('Failed to connect to database. Please check your connection.');
-    } finally {
+
+    const results = await Promise.all([
+      loadKnowledgeEntries(),
+      loadGeneratedPrompts(),
+      loadTheme(),
+    ]);
+
+    if (results.every(Boolean)) {
       setIsLoading(false);
     }
   };
@@ -55,45 +53,49 @@ export function JarvisProvider({ children }: { children: ReactNode }) {
   const loadKnowledgeEntries = async () => {
     try {
       const response = await fetch('/api/knowledge-entries');
-      if (response.ok) {
-        const data = await response.json();
-        setKnowledgeEntries(data);
-      } else {
-        console.error('Failed to load knowledge entries');
-      }
-    } catch (err) {
-      console.error('Error loading knowledge entries:', err);
-      throw err;
+      if (!response.ok) return false;
+
+      const data = await response.json();
+      setKnowledgeEntries(Array.isArray(data) ? data : []);
+      return true;
+    } catch {
+      return false;
     }
   };
 
   const loadGeneratedPrompts = async () => {
     try {
       const response = await fetch('/api/generated-prompts');
-      if (response.ok) {
-        const data = await response.json();
-        setGeneratedPrompts(data);
-      } else {
-        console.error('Failed to load generated prompts');
-      }
-    } catch (err) {
-      console.error('Error loading generated prompts:', err);
-      throw err;
+      if (!response.ok) return false;
+
+      const data = await response.json();
+      setGeneratedPrompts(Array.isArray(data) ? data.map((prompt) => ({
+        id: prompt.id,
+        query: prompt.user_query,
+        targetTool: prompt.target_tool,
+        modelUsed: prompt.model_used,
+        modelTier: prompt.model_tier,
+        isPaid: prompt.model_tier === 'paid',
+        retrievedChunkIds: prompt.retrieved_chunk_ids || [],
+        generatedOutput: prompt.generated_output,
+        createdAt: prompt.created_at,
+      })) : []);
+      return true;
+    } catch {
+      return false;
     }
   };
 
   const loadTheme = async () => {
     try {
       const response = await fetch('/api/settings');
-      if (response.ok) {
-        const data = await response.json();
-        setThemeState(data.theme);
-      } else {
-        console.error('Failed to load theme');
-      }
-    } catch (err) {
-      console.error('Error loading theme:', err);
-      throw err;
+      if (!response.ok) return false;
+
+      const data = await response.json();
+      setThemeState(data?.theme || 'system');
+      return true;
+    } catch {
+      return false;
     }
   };
 
@@ -110,15 +112,13 @@ export function JarvisProvider({ children }: { children: ReactNode }) {
         },
         body: JSON.stringify({ password }),
       });
-      if (response.ok) {
-        setPasswordVerified(true);
-        return true;
-      } else {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Password verification failed');
-      }
-    } catch (error) {
-      console.error('Error verifying password:', error);
+      if (!response.ok) return false;
+
+      const result = await response.json();
+      const verified = result?.success === true;
+      setPasswordVerified(verified);
+      return verified;
+    } catch {
       return false;
     }
   };
@@ -182,7 +182,14 @@ export function JarvisProvider({ children }: { children: ReactNode }) {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(prompt),
+      body: JSON.stringify({
+        user_query: prompt.query,
+        target_tool: prompt.targetTool,
+        model_used: prompt.modelUsed,
+        model_tier: prompt.modelTier,
+        retrieved_chunk_ids: prompt.retrievedChunkIds,
+        generated_output: prompt.generatedOutput,
+      }),
     });
     if (response.ok) {
       const data = await response.json();

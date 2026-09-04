@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
       RETURNING id, category, option_chosen, context_query, created_at
     `;
 
-    return NextResponse.json(preference, { status: 201 });
+    return NextResponse.json(preference ?? null, { status: preference ? 201 : 200 });
   } catch (error) {
     console.error('Error logging preference:', error);
     return NextResponse.json(
