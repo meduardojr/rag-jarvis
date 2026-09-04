@@ -44,6 +44,11 @@ export function KnowledgeInput() {
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
+  const getPendingTags = () => Array.from(new Set([
+    ...tags,
+    ...tagInput.split(',').map((tag) => tag.trim()).filter(Boolean),
+  ]));
+
   const handleAddEntry = async () => {
     if (!title.trim() || !content.trim()) {
       toast.error('Please fill in title and content');
@@ -56,7 +61,7 @@ export function KnowledgeInput() {
         title,
         content,
         category,
-        tags,
+        tags: getPendingTags(),
       };
 
       await addKnowledgeEntry(newEntry);
@@ -86,7 +91,7 @@ export function KnowledgeInput() {
         title,
         content,
         category,
-        tags,
+        tags: getPendingTags(),
       });
 
       setEditingId(null);
@@ -122,11 +127,11 @@ export function KnowledgeInput() {
   };
 
   const handleAddTag = () => {
-    const tag = tagInput.trim();
-    if (tag && !tags.includes(tag)) {
-      setTags([...tags, tag]);
-      setTagInput('');
+    const nextTags = getPendingTags();
+    if (nextTags.length > tags.length) {
+      setTags(nextTags);
     }
+    setTagInput('');
   };
 
   const handleRemoveTag = (tagToRemove: string) => {
@@ -197,7 +202,7 @@ export function KnowledgeInput() {
         <div className="space-y-2">
           <div className="flex gap-2">
             <Input
-              placeholder="Add tag (e.g., frontend, backend, database)"
+              placeholder="Tags separated by commas (e.g., frontend, backend, database)"
               value={tagInput}
               onChange={(e) => setTagInput(e.target.value)}
               onKeyDown={handleTagInputKeyDown}

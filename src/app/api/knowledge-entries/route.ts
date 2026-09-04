@@ -2,34 +2,45 @@ import { sql } from '@/db';
 import { NextRequest, NextResponse } from 'next/server';
 import { chunkText, generateEmbedding } from '@/lib/embeddings';
 
-async function hasKnowledgeMetadataColumns() {
-  const [result] = await sql`
-    SELECT COUNT(*)::int AS count
+async function getKnowledgeColumns() {
+  const columns = await sql`
+    SELECT column_name
     FROM information_schema.columns
     WHERE table_schema = 'public'
       AND table_name = 'knowledge_entries'
       AND column_name IN ('category', 'tags', 'source_type')
   `;
+  const names = new Set(columns.map((column) => column.column_name));
 
-  return result?.count === 3;
+  return {
+    hasMetadata: ['category', 'tags', 'source_type'].every((name) => names.has(name)),
+    hasTags: names.has('tags'),
+  };
 }
 
 // GET - Fetch all knowledge entries
 export async function GET() {
   try {
-    const hasMetadata = await hasKnowledgeMetadataColumns();
+    const { hasMetadata, hasTags } = await getKnowledgeColumns();
     const entries = hasMetadata
       ? await sql`
           SELECT id, title, content, category, tags, source_type, created_at, updated_at
           FROM public.knowledge_entries
           ORDER BY created_at DESC
         `
-      : await sql`
-          SELECT id, title, content, 'Stack' AS category, ARRAY[]::text[] AS tags,
-            'manual' AS source_type, created_at, updated_at
-          FROM public.knowledge_entries
-          ORDER BY created_at DESC
-        `;
+      : hasTags
+        ? await sql`
+            SELECT id, title, content, 'Stack' AS category, tags,
+              'manual' AS source_type, created_at, updated_at
+            FROM public.knowledge_entries
+            ORDER BY created_at DESC
+          `
+        : await sql`
+            SELECT id, title, content, 'Stack' AS category, ARRAY[]::text[] AS tags,
+              'manual' AS source_type, created_at, updated_at
+            FROM public.knowledge_entries
+            ORDER BY created_at DESC
+          `;
 
     return NextResponse.json(entries);
   } catch (error) {
@@ -45,7 +56,14 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { title, content, category, tags = [], source_type = 'manual' } = body;
+    const { title, content, category, source_type = 'manual' } = body;
+    const rawTags: unknown[] = Array.isArray(body.tags) ? body.tags : [body.tags];
+    const tags = Array.from(new Set(
+      rawTags
+        .flatMap((tag) => typeof tag === 'string' ? tag.split(',') : [])
+        .map((tag) => tag.trim())
+        .filter(Boolean)
+    ));
 
     if (!title || !content) {
       return NextResponse.json(
@@ -54,20 +72,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create the knowledge entry. Older schemas only contain the core fields.
-    const hasMetadata = await hasKnowledgeMetadataColumns();
+    // Create the knowledge entry. Older schemas may only contain some metadata fields.
+    const { hasMetadata, hasTags } = await getKnowledgeColumns();
     const [entry] = hasMetadata
       ? await sql`
           INSERT INTO public.knowledge_entries (title, content, category, tags, source_type)
           VALUES (${title}, ${content}, ${category || 'Stack'}, ${tags}, ${source_type})
           RETURNING id, title, content, category, tags, source_type, created_at, updated_at
         `
-      : await sql`
-          INSERT INTO public.knowledge_entries (title, content)
-          VALUES (${title}, ${content})
-          RETURNING id, title, content, 'Stack' AS category, ARRAY[]::text[] AS tags,
-            'manual' AS source_type, created_at, updated_at
-        `;
+      : hasTags
+        ? await sql`
+            INSERT INTO public.knowledge_entries (title, content, tags)
+            VALUES (${title}, ${content}, ${tags})
+            RETURNING id, title, content, 'Stack' AS category, tags,
+              'manual' AS source_type, created_at, updated_at
+          `
+        : await sql`
+            INSERT INTO public.knowledge_entries (title, content)
+            VALUES (${title}, ${content})
+            RETURNING id, title, content, 'Stack' AS category, ARRAY[]::text[] AS tags,
+              'manual' AS source_type, created_at, updated_at
+          `;
 
     if (!entry) {
       return NextResponse.json(null, { status: 200 });
@@ -110,9 +135,16 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { title, content, category, tags } = body;
+    const { title, content, category } = body;
+    const rawTags: unknown[] = Array.isArray(body.tags) ? body.tags : [body.tags];
+    const tags = Array.from(new Set(
+      rawTags
+        .flatMap((tag) => typeof tag === 'string' ? tag.split(',') : [])
+        .map((tag) => tag.trim())
+        .filter(Boolean)
+    ));
 
-    const hasMetadata = await hasKnowledgeMetadataColumns();
+    const { hasMetadata, hasTags } = await getKnowledgeColumns();
     const [entry] = hasMetadata
       ? await sql`
           UPDATE public.knowledge_entries
@@ -120,19 +152,30 @@ export async function PUT(request: NextRequest) {
             title = COALESCE(${title}, title),
             content = COALESCE(${content}, content),
             category = COALESCE(${category}, category),
-            tags = COALESCE(${tags}, tags)
+            tags = ${tags}
           WHERE id = ${id}
           RETURNING id, title, content, category, tags, source_type, created_at, updated_at
         `
-      : await sql`
-          UPDATE public.knowledge_entries
-          SET
-            title = COALESCE(${title}, title),
-            content = COALESCE(${content}, content)
-          WHERE id = ${id}
-          RETURNING id, title, content, 'Stack' AS category, ARRAY[]::text[] AS tags,
-            'manual' AS source_type, created_at, updated_at
-        `;
+      : hasTags
+        ? await sql`
+            UPDATE public.knowledge_entries
+            SET
+              title = COALESCE(${title}, title),
+              content = COALESCE(${content}, content),
+              tags = ${tags}
+            WHERE id = ${id}
+            RETURNING id, title, content, 'Stack' AS category, tags,
+              'manual' AS source_type, created_at, updated_at
+          `
+        : await sql`
+            UPDATE public.knowledge_entries
+            SET
+              title = COALESCE(${title}, title),
+              content = COALESCE(${content}, content)
+            WHERE id = ${id}
+            RETURNING id, title, content, 'Stack' AS category, ARRAY[]::text[] AS tags,
+              'manual' AS source_type, created_at, updated_at
+          `;
 
     if (!entry) {
       return NextResponse.json(null);
