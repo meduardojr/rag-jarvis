@@ -2,23 +2,38 @@ import { sql } from '@/db';
 import { NextRequest, NextResponse } from 'next/server';
 import { chunkText, generateEmbedding } from '@/lib/embeddings';
 
+async function hasKnowledgeMetadataColumns() {
+  const [result] = await sql`
+    SELECT COUNT(*)::int AS count
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'knowledge_entries'
+      AND column_name IN ('category', 'tags', 'source_type')
+  `;
+
+  return result?.count === 3;
+}
+
 // GET - Fetch all knowledge entries
 export async function GET() {
   try {
-    const entries = await sql`
-      SELECT id, title, content, category, tags, source_type, created_at, updated_at
-      FROM knowledge_entries
-      ORDER BY created_at DESC
-    `;
+    const hasMetadata = await hasKnowledgeMetadataColumns();
+    const entries = hasMetadata
+      ? await sql`
+          SELECT id, title, content, category, tags, source_type, created_at, updated_at
+          FROM public.knowledge_entries
+          ORDER BY created_at DESC
+        `
+      : await sql`
+          SELECT id, title, content, 'Stack' AS category, ARRAY[]::text[] AS tags,
+            'manual' AS source_type, created_at, updated_at
+          FROM public.knowledge_entries
+          ORDER BY created_at DESC
+        `;
+
     return NextResponse.json(entries);
   } catch (error) {
-    const visibleColumns = await sql`
-      SELECT table_schema, column_name
-      FROM information_schema.columns
-      WHERE table_name = 'knowledge_entries'
-      ORDER BY table_schema, ordinal_position
-    `;
-    console.error('Error fetching knowledge entries:', error, { visibleColumns });
+    console.error('Error fetching knowledge entries:', error);
     return NextResponse.json(
       { error: 'Failed to fetch knowledge entries' },
       { status: 500 }
@@ -39,12 +54,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create the knowledge entry
-    const [entry] = await sql`
-      INSERT INTO knowledge_entries (title, content, category, tags, source_type)
-      VALUES (${title}, ${content}, ${category || 'Stack'}, ${tags}, ${source_type})
-      RETURNING id, title, content, category, tags, source_type, created_at, updated_at
-    `;
+    // Create the knowledge entry. Older schemas only contain the core fields.
+    const hasMetadata = await hasKnowledgeMetadataColumns();
+    const [entry] = hasMetadata
+      ? await sql`
+          INSERT INTO public.knowledge_entries (title, content, category, tags, source_type)
+          VALUES (${title}, ${content}, ${category || 'Stack'}, ${tags}, ${source_type})
+          RETURNING id, title, content, category, tags, source_type, created_at, updated_at
+        `
+      : await sql`
+          INSERT INTO public.knowledge_entries (title, content)
+          VALUES (${title}, ${content})
+          RETURNING id, title, content, 'Stack' AS category, ARRAY[]::text[] AS tags,
+            'manual' AS source_type, created_at, updated_at
+        `;
 
     if (!entry) {
       return NextResponse.json(null, { status: 200 });
@@ -58,7 +81,7 @@ export async function POST(request: NextRequest) {
       const embedding = await generateEmbedding(chunks[i]);
       
       await sql`
-        INSERT INTO chunks (entry_id, chunk_text, chunk_index, embedding)
+        INSERT INTO public.chunks (entry_id, chunk_text, chunk_index, embedding)
         VALUES (${entry.id}, ${chunks[i]}, ${i}, ${embedding}::vector)
       `;
     }
@@ -89,16 +112,27 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
     const { title, content, category, tags } = body;
 
-    const [entry] = await sql`
-      UPDATE knowledge_entries
-      SET 
-        title = COALESCE(${title}, title),
-        content = COALESCE(${content}, content),
-        category = COALESCE(${category}, category),
-        tags = COALESCE(${tags}, tags)
-      WHERE id = ${id}
-      RETURNING id, title, content, category, tags, source_type, created_at, updated_at
-    `;
+    const hasMetadata = await hasKnowledgeMetadataColumns();
+    const [entry] = hasMetadata
+      ? await sql`
+          UPDATE public.knowledge_entries
+          SET
+            title = COALESCE(${title}, title),
+            content = COALESCE(${content}, content),
+            category = COALESCE(${category}, category),
+            tags = COALESCE(${tags}, tags)
+          WHERE id = ${id}
+          RETURNING id, title, content, category, tags, source_type, created_at, updated_at
+        `
+      : await sql`
+          UPDATE public.knowledge_entries
+          SET
+            title = COALESCE(${title}, title),
+            content = COALESCE(${content}, content)
+          WHERE id = ${id}
+          RETURNING id, title, content, 'Stack' AS category, ARRAY[]::text[] AS tags,
+            'manual' AS source_type, created_at, updated_at
+        `;
 
     if (!entry) {
       return NextResponse.json(null);
@@ -107,7 +141,7 @@ export async function PUT(request: NextRequest) {
     // Re-chunk and update embeddings if content changed
     if (content) {
       // Delete existing chunks
-      await sql`DELETE FROM chunks WHERE entry_id = ${id}`;
+      await sql`DELETE FROM public.chunks WHERE entry_id = ${id}`;
 
       // Re-chunk the content
       const chunks = chunkText(content, 400);
@@ -116,7 +150,7 @@ export async function PUT(request: NextRequest) {
         const embedding = await generateEmbedding(chunks[i]);
         
         await sql`
-          INSERT INTO chunks (entry_id, chunk_text, chunk_index, embedding)
+          INSERT INTO public.chunks (entry_id, chunk_text, chunk_index, embedding)
           VALUES (${id}, ${chunks[i]}, ${i}, ${embedding}::vector)
         `;
       }
@@ -145,7 +179,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    await sql`DELETE FROM knowledge_entries WHERE id = ${id}`;
+    await sql`DELETE FROM public.knowledge_entries WHERE id = ${id}`;
 
     return NextResponse.json({ success: true });
   } catch (error) {
