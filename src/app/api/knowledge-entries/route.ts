@@ -1,5 +1,6 @@
 import { sql } from '@/db';
 import { NextRequest, NextResponse } from 'next/server';
+import { chunkText, generateEmbedding } from '@/lib/embeddings';
 
 // GET - Fetch all knowledge entries
 export async function GET() {
@@ -149,62 +150,3 @@ export async function DELETE(request: NextRequest) {
   }
 }
 
-// Helper function to chunk text
-function chunkText(text: string, maxTokens: number): string[] {
-  // Rough estimate: 1 token ≈ 4 characters for English text
-  const maxChars = maxTokens * 4;
-  const chunks: string[] = [];
-  
-  // Split by double newlines (paragraphs) first
-  const paragraphs = text.split(/\n\n+/);
-  let currentChunk = '';
-  
-  for (const paragraph of paragraphs) {
-    if ((currentChunk + paragraph).length > maxChars && currentChunk.length > 0) {
-      chunks.push(currentChunk.trim());
-      currentChunk = paragraph;
-    } else {
-      currentChunk += (currentChunk ? '\n\n' : '') + paragraph;
-    }
-  }
-  
-  if (currentChunk.trim()) {
-    chunks.push(currentChunk.trim());
-  }
-  
-  return chunks.length > 0 ? chunks : [text];
-}
-
-// Helper function to generate embeddings using OpenAI
-async function generateEmbedding(text: string): Promise<number[]> {
-  const apiKey = process.env.OPENAI_API_KEY;
-  
-  if (!apiKey) {
-    console.warn('OpenAI API key not found, using zero embeddings');
-    return new Array(1536).fill(0);
-  }
-
-  try {
-    const response = await fetch('https://api.openai.com/v1/embeddings', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'text-embedding-3-small',
-        input: text,
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`OpenAI API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data.data[0].embedding;
-  } catch (error) {
-    console.error('Error generating embedding:', error);
-    return new Array(1536).fill(0);
-  }
-}

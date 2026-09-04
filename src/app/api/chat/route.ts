@@ -1,5 +1,6 @@
 import { sql } from '@/db';
 import { NextRequest, NextResponse } from 'next/server';
+import { generateEmbedding } from '@/lib/embeddings';
 
 // POST - Chat with RAG (generates AI prompts grounded in knowledge base)
 export async function POST(request: NextRequest) {
@@ -110,49 +111,6 @@ export async function POST(request: NextRequest) {
 function getModelTier(model: string): 'free' | 'paid' {
   const freeModels = ['gemini-2.0-flash', 'gemini-1.5-flash', 'groq-llama', 'groq-mixtral'];
   return freeModels.some(m => model.toLowerCase().includes(m.toLowerCase())) ? 'free' : 'paid';
-}
-
-// Generate embedding using OpenAI
-async function generateEmbedding(text: string): Promise<number[] | null> {
-  const apiKey = process.env.OPENAI_API_KEY;
-  
-  if (!apiKey) {
-    console.warn('OpenAI API key not found, using fallback embedding');
-    return generateFallbackEmbedding(text);
-  }
-
-  try {
-    const response = await fetch('https://api.openai.com/v1/embeddings', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'text-embedding-3-small',
-        input: text,
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`OpenAI API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data.data[0].embedding;
-  } catch (error) {
-    console.error('Error generating embedding:', error);
-    return generateFallbackEmbedding(text);
-  }
-}
-
-// Simple fallback embedding (hash-based for development)
-function generateFallbackEmbedding(text: string): number[] {
-  const embedding = new Array(1536).fill(0);
-  for (let i = 0; i < text.length; i++) {
-    embedding[i % 1536] += text.charCodeAt(i) / 255;
-  }
-  return embedding.map(v => v / text.length);
 }
 
 // Generate prompt using LLM

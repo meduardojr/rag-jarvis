@@ -1,31 +1,31 @@
 // Neon Database Client (server-side only)
-// This module is lazy-loaded to avoid build-time connection attempts
+// Lazy-init wrapper around neon() to avoid build-time connection attempts
 import { neon } from '@neondatabase/serverless';
 
-type SqlClient = ReturnType<typeof neon>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type SqlResult = Promise<any[]>;
 
-let _sql: SqlClient | null = null;
+let _sql: ((strings: TemplateStringsArray, ...values: unknown[]) => SqlResult) | null = null;
 
-export function getSql(): SqlClient {
+function getClient(): (strings: TemplateStringsArray, ...values: unknown[]) => SqlResult {
   if (!_sql) {
     if (!process.env.DATABASE_URL) {
       throw new Error('DATABASE_URL environment variable is not set');
     }
-    _sql = neon(process.env.DATABASE_URL);
+    const neonClient = neon(process.env.DATABASE_URL);
+    // Wrap to ensure we always return an array
+    _sql = (strings: TemplateStringsArray, ...values: unknown[]): SqlResult => {
+      return neonClient(strings, ...values) as SqlResult;
+    };
   }
   return _sql;
 }
 
-// Export sql as a getter that returns the client
-// Usage in routes: const { sql } = require('@/db');
-// Then: await sql`SELECT * FROM ...`
-export const sql = new Proxy({} as SqlClient, {
-  get(_target, prop) {
-    const client = getSql();
-    if (prop === 'then') return undefined;
-    return (client as any)[prop];
-  },
-});
+// Tagged template function - lazily initializes the client
+// Usage: await sql`SELECT * FROM users`
+export function sql(strings: TemplateStringsArray, ...values: unknown[]): SqlResult {
+  return getClient()(strings, values);
+}
 
 // IMPORTANT: Only use this in server-side code (API routes, server actions, server components).
 // NEVER import @neondatabase/serverless in client-side React components.
