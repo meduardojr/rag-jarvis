@@ -53,19 +53,18 @@ export function KnowledgeInput() {
     setIsAdding(true);
     try {
       const newEntry = {
-        id: crypto.randomUUID(),
         title,
         content,
         category,
         tags,
-        createdAt: new Date(),
       };
 
-      addKnowledgeEntry(newEntry);
+      await addKnowledgeEntry(newEntry);
       resetForm();
       toast.success('Knowledge entry added successfully!');
-    } catch (error) {
-      toast.error('Failed to add knowledge entry');
+    } catch (error: any) {
+      console.error('Error adding knowledge entry:', error);
+      toast.error(error.message || 'Failed to add knowledge entry');
     } finally {
       setIsAdding(false);
     }
@@ -82,7 +81,7 @@ export function KnowledgeInput() {
       const existingEntry = knowledgeEntries.find((e) => e.id === editingId);
       if (!existingEntry) throw new Error('Entry not found');
 
-      updateKnowledgeEntry(editingId, {
+      await updateKnowledgeEntry(editingId, {
         ...existingEntry,
         title,
         content,
@@ -93,8 +92,9 @@ export function KnowledgeInput() {
       setEditingId(null);
       resetForm();
       toast.success('Knowledge entry updated successfully!');
-    } catch (error) {
-      toast.error('Failed to update knowledge entry');
+    } catch (error: any) {
+      console.error('Error updating knowledge entry:', error);
+      toast.error(error.message || 'Failed to update knowledge entry');
     } finally {
       setIsAdding(false);
     }
@@ -112,7 +112,7 @@ export function KnowledgeInput() {
     setTitle(entry.title);
     setContent(entry.content);
     setCategory(entry.category);
-    setTags(entry.tags);
+    setTags(entry.tags || []);
     setEditingId(entry.id);
   };
 
@@ -140,12 +140,17 @@ export function KnowledgeInput() {
     }
   };
 
-  const handleDeleteEntry = (id: string) => {
-    deleteKnowledgeEntry(id);
-    toast.success('Entry deleted');
-    if (editingId === id) {
-      setEditingId(null);
-      resetForm();
+  const handleDeleteEntry = async (id: string) => {
+    try {
+      await deleteKnowledgeEntry(id);
+      toast.success('Entry deleted');
+      if (editingId === id) {
+        setEditingId(null);
+        resetForm();
+      }
+    } catch (error: any) {
+      console.error('Error deleting knowledge entry:', error);
+      toast.error(error.message || 'Failed to delete entry');
     }
   };
 
@@ -290,7 +295,6 @@ export function KnowledgeInput() {
         </div>
       </div>
 
-      {/* Entries Preview */}
       {knowledgeEntries.length > 0 && (
         <div className="border-t pt-4 space-y-3">
           <h3 className="text-lg font-semibold text-foreground/90">
@@ -312,7 +316,7 @@ export function KnowledgeInput() {
                         {entry.category}
                       </Badge>
                       <span>
-                        {new Date(entry.createdAt).toLocaleDateString()}
+                        {entry.created_at ? new Date(entry.created_at).toLocaleDateString() : 'N/A'}
                       </span>
                     </div>
                   </div>
@@ -339,9 +343,9 @@ export function KnowledgeInput() {
                   {entry.content.substring(0, 100)}
                   {entry.content.length > 100 ? '...' : ''}
                 </p>
-                {entry.tags.length > 0 && (
+                {entry.tags && entry.tags.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-2">
-                    {entry.tags.map((tag) => (
+                    {entry.tags.map((tag: string) => (
                       <Badge key={tag} variant="secondary" className="text-xs">
                         {tag}
                       </Badge>
@@ -353,8 +357,7 @@ export function KnowledgeInput() {
             {knowledgeEntries.length > 5 && (
               <div className="text-center text-sm text-muted-foreground py-2">
                 <FileText className="h-4 w-4 inline mr-1" />
-                +{knowledgeEntries.length - 5} more entries in your knowledge
-                base
+                +{knowledgeEntries.length - 5} more entries in your knowledge base
               </div>
             )}
           </div>

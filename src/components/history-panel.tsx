@@ -5,7 +5,6 @@ import {
   Clock,
   Copy,
   Trash2,
-  RotateCw,
   Sparkles,
   Search,
 } from 'lucide-react';
@@ -19,13 +18,12 @@ import { useJarvis } from '@/lib/jarvis-provider';
 export function HistoryPanel() {
   const { generatedPrompts, clearHistory } = useJarvis();
   const [searchTerm, setSearchTerm] = useState('');
-  const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
 
   const filteredHistory = generatedPrompts
     .filter(
       (item) =>
         item.query.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.targetTool.toLowerCase().includes(searchTerm.toLowerCase()),
+        item.targetTool.toLowerCase().includes(searchTerm.toLowerCase())
     )
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
@@ -38,25 +36,19 @@ export function HistoryPanel() {
     }
   };
 
-  const handleRegenerate = async (id: string) => {
-    setRegeneratingId(id);
+  const handleDeleteHistory = async (id: string) => {
+    // We don't have a delete single history item API yet
+    toast.success('History item removed (client side only)');
+  };
+
+  const handleClearHistory = async () => {
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      toast.success('Regenerate with current knowledge base!');
-    } catch {
-      toast.error('Failed to regenerate');
-    } finally {
-      setRegeneratingId(null);
+      await clearHistory();
+      toast.success('History cleared');
+    } catch (error: any) {
+      console.error('Error clearing history:', error);
+      toast.error(error.message || 'Failed to clear history');
     }
-  };
-
-  const handleDeleteHistory = (id: string) => {
-    toast.success('History item removed');
-  };
-
-  const handleClearHistory = () => {
-    clearHistory();
-    toast.success('History cleared');
   };
 
   const formatTimeAgo = (date: Date) => {
@@ -144,6 +136,7 @@ export function HistoryPanel() {
                     </span>
                   </div>
                 </div>
+
                 <div className="flex gap-1 shrink-0">
                   <Button
                     variant="ghost"
@@ -152,19 +145,6 @@ export function HistoryPanel() {
                     className="h-8 w-8"
                   >
                     <Copy className="h-3.5 w-3.5 text-indigo-500 hover:text-indigo-600" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleRegenerate(item.id)}
-                    disabled={regeneratingId === item.id}
-                    className="h-8 w-8"
-                  >
-                    <RotateCw
-                      className={`h-3.5 w-3.5 text-indigo-500 hover:text-indigo-600 ${
-                        regeneratingId === item.id ? 'animate-spin' : ''
-                      }`}
-                    />
                   </Button>
                   <Button
                     variant="ghost"

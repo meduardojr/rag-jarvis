@@ -40,10 +40,9 @@ const MODELS = [
 ] as const;
 
 export function SettingsPanel() {
-  const { setPasswordVerified, theme, setTheme } = useJarvis();
+  const { theme, setTheme, verifyPassword, isPasswordVerified } = useJarvis();
   const [password, setPassword] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
-  const [isVerified, setIsVerified] = useState(false);
   const [defaultModel, setDefaultModel] = useState('gemini-flash');
   const [autoPickThreshold, setAutoPickThreshold] = useState(90);
   const [minSampleSize, setMinSampleSize] = useState([5]);
@@ -60,18 +59,17 @@ export function SettingsPanel() {
 
     setIsVerifying(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      if (password === 'jarvis123') {
-        setIsVerified(true);
-        setPasswordVerified(true);
+      const isValid = await verifyPassword(password);
+      if (isValid) {
         toast.success('Password verified for this session!');
       } else {
-        toast.error('Incorrect password (hint: try "jarvis123")');
+        toast.error('Incorrect password');
       }
-    } catch {
-      toast.error('Verification failed');
+    } catch (error: any) {
+      toast.error(error.message || 'Verification failed');
     } finally {
       setIsVerifying(false);
+      setPassword('');
     }
   };
 
@@ -106,7 +104,7 @@ export function SettingsPanel() {
         <div className="space-y-2">
           <Input
             type="password"
-            placeholder="Enter password (hint: jarvis123)"
+            placeholder="Enter password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleVerifyPassword()}
@@ -130,7 +128,7 @@ export function SettingsPanel() {
               </>
             )}
           </Button>
-          {isVerified ? (
+          {isPasswordVerified ? (
             <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
               <Check className="h-3 w-3" /> Verified for this session
             </div>
