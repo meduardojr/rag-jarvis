@@ -13,22 +13,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get the stored password hash from settings
     const settings = await sql`
       SELECT password_hash, session_timeout_minutes FROM app_settings WHERE id = 1
     `;
 
-    if (settings.length === 0 || !settings[0].password_hash) {
+    if (settings.length === 0 || !settings[0]?.password_hash) {
       return NextResponse.json(
         { error: 'Password not configured. Please set a password first.' },
         { status: 401 }
       );
     }
 
-    // For development, we'll use a simple comparison
-    // In production, use bcrypt for hashing
-    const storedHash = settings[0].password_hash;
-    const isValid = await verifyPassword(password, storedHash);
+    const isValid = await verifyPassword(password, settings[0].password_hash as string);
 
     if (!isValid) {
       return NextResponse.json(
@@ -37,10 +33,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create session cookie
-    const sessionTimeout = settings[0].session_timeout_minutes || 30;
+    const sessionTimeout = (settings[0].session_timeout_minutes as number) || 30;
     const expires = new Date(Date.now() + sessionTimeout * 60 * 1000);
-    
+
     const response = NextResponse.json({ success: true });
     response.cookies.set('jarvis-session', 'verified', {
       httpOnly: true,
@@ -60,14 +55,8 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Helper function to verify password
+// Verify password using bcrypt
 async function verifyPassword(password: string, hash: string): Promise<boolean> {
-  // For development, support plain text comparison
-  // TODO: Implement bcrypt verification in production
-  if (hash.startsWith("$2")) {
-    // Use bcrypt if hash is bcrypt formatted
-    const bcrypt = await import("bcryptjs");
-    return await bcrypt.compare(password, hash);
-  }
-  return password === hash;
+  const bcrypt = await import('bcryptjs');
+  return bcrypt.compare(password, hash);
 }

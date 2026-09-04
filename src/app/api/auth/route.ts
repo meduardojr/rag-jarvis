@@ -1,7 +1,7 @@
 import { sql } from '@/db';
 import { NextRequest, NextResponse } from 'next/server';
 
-// POST - Set/change password (for first-time setup or password change)
+// POST - Set/change password
 export async function POST(request: NextRequest) {
   try {
     const { password } = await request.json();
@@ -13,9 +13,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // For development, store password as plain text
-    // In production, use bcrypt to hash the password
-    const passwordHash = password; // Replace with bcrypt.hash(password, 10) in production
+    const passwordHash = await hashPassword(password);
 
     await sql`
       INSERT INTO app_settings (id, password_hash)
@@ -50,4 +48,10 @@ export async function GET() {
       { status: 500 }
     );
   }
+}
+
+// Hash password using bcrypt
+async function hashPassword(password: string): Promise<string> {
+  const bcrypt = await import('bcryptjs');
+  return bcrypt.hash(password, 10);
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import { AlertCircle, RefreshCw, Database } from 'lucide-react';
 
 import { JarvisLogo } from '@/components/ui/jarvis-logo';
 import { HeroIllustration } from '@/components/ui/hero-illustration';
@@ -8,6 +9,14 @@ import { KnowledgeInput } from '@/components/knowledge-input';
 import { PromptGenerator } from '@/components/prompt-generator';
 import { HistoryPanel } from '@/components/history-panel';
 import { SettingsPanel } from '@/components/settings-panel';
+import { Button } from '@/components/ui/button';
+import {
+  KnowledgeInputSkeleton,
+  PromptGeneratorSkeleton,
+  HistoryPanelSkeleton,
+  SettingsPanelSkeleton,
+} from '@/components/ui/skeleton-panel';
+import { useJarvis } from '@/lib/jarvis-provider';
 
 const fadeIn = {
   initial: { opacity: 0, y: 20 },
@@ -15,6 +24,8 @@ const fadeIn = {
 };
 
 export default function Home() {
+  const { isLoading, error, refreshData } = useJarvis();
+
   return (
     <div className="min-h-screen relative overflow-x-hidden">
       {/* Background gradient orbs */}
@@ -45,6 +56,34 @@ export default function Home() {
             </div>
           </div>
         </motion.header>
+
+        {/* Error State */}
+        {error && !isLoading && (
+          <motion.div
+            {...fadeIn}
+            transition={{ duration: 0.4 }}
+            className="glass-panel p-6 rounded-2xl border border-red-500/30 mb-6"
+          >
+            <div className="flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 text-red-400 mt-0.5 shrink-0" />
+              <div className="flex-1 space-y-2">
+                <h3 className="font-semibold text-red-400">Connection Error</h3>
+                <p className="text-sm text-muted-foreground">
+                  {error}
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={refreshData}
+                  className="mt-2"
+                >
+                  <RefreshCw className="h-3.5 w-3.5 mr-1" />
+                  Retry Connection
+                </Button>
+              </div>
+            </div>
+          </motion.div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
           {/* Left Column - Hero */}
@@ -88,7 +127,7 @@ export default function Home() {
               transition={{ duration: 0.6, delay: 0.2 }}
             >
               <div className="glass-panel ai-primary p-6 rounded-2xl">
-                <KnowledgeInput />
+                {isLoading ? <KnowledgeInputSkeleton /> : <KnowledgeInput />}
               </div>
             </motion.div>
 
@@ -97,7 +136,7 @@ export default function Home() {
               transition={{ duration: 0.6, delay: 0.3 }}
             >
               <div className="glass-panel ai-secondary p-6 rounded-2xl">
-                <PromptGenerator />
+                {isLoading ? <PromptGeneratorSkeleton /> : <PromptGenerator />}
               </div>
             </motion.div>
 
@@ -107,10 +146,10 @@ export default function Home() {
               className="grid grid-cols-1 md:grid-cols-2 gap-6"
             >
               <div className="glass-panel ai-accent p-6 rounded-2xl">
-                <HistoryPanel />
+                {isLoading ? <HistoryPanelSkeleton /> : <HistoryPanel />}
               </div>
               <div className="glass-panel ai-accent p-6 rounded-2xl">
-                <SettingsPanel />
+                {isLoading ? <SettingsPanelSkeleton /> : <SettingsPanel />}
               </div>
             </motion.div>
           </div>
@@ -120,11 +159,17 @@ export default function Home() {
         <motion.footer
           {...fadeIn}
           transition={{ duration: 0.6, delay: 0.5 }}
-          className="mt-12 text-center text-xs text-muted-foreground"
+          className="mt-12 text-center text-xs text-muted-foreground flex items-center justify-center gap-2"
         >
-          <p>
-            Built with Next.js · v2.0 Personal Knowledge RAG
-          </p>
+          {isLoading && (
+            <>
+              <Database className="h-3 w-3 animate-pulse" />
+              <span>Connecting to database...</span>
+            </>
+          )}
+          {!isLoading && !error && (
+            <p>Built with Next.js · v2.0 Personal Knowledge RAG</p>
+          )}
         </motion.footer>
       </div>
     </div>
