@@ -12,7 +12,13 @@ export async function GET() {
     `;
     return NextResponse.json(entries);
   } catch (error) {
-    console.error('Error fetching knowledge entries:', error);
+    const visibleColumns = await sql`
+      SELECT table_schema, column_name
+      FROM information_schema.columns
+      WHERE table_name = 'knowledge_entries'
+      ORDER BY table_schema, ordinal_position
+    `;
+    console.error('Error fetching knowledge entries:', error, { visibleColumns });
     return NextResponse.json(
       { error: 'Failed to fetch knowledge entries' },
       { status: 500 }
