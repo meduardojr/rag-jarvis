@@ -2,6 +2,15 @@ import { sql } from '@/db';
 import { NextRequest, NextResponse } from 'next/server';
 import { chunkText, generateEmbedding } from '@/lib/embeddings';
 
+function requireVerifiedSession(request: NextRequest) {
+  if (request.cookies.get('jarvis-session')?.value === 'verified') return null;
+
+  return NextResponse.json(
+    { error: 'Verify your password before changing the knowledge base' },
+    { status: 401 }
+  );
+}
+
 async function getKnowledgeColumns() {
   const columns = await sql`
     SELECT column_name
@@ -54,6 +63,9 @@ export async function GET() {
 
 // POST - Create a new knowledge entry with automatic chunking
 export async function POST(request: NextRequest) {
+  const unauthorized = requireVerifiedSession(request);
+  if (unauthorized) return unauthorized;
+
   try {
     const body = await request.json();
     const { title, content, category, source_type = 'manual' } = body;
@@ -123,6 +135,9 @@ export async function POST(request: NextRequest) {
 
 // PUT - Update a knowledge entry
 export async function PUT(request: NextRequest) {
+  const unauthorized = requireVerifiedSession(request);
+  if (unauthorized) return unauthorized;
+
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
@@ -211,6 +226,9 @@ export async function PUT(request: NextRequest) {
 
 // DELETE - Delete a knowledge entry
 export async function DELETE(request: NextRequest) {
+  const unauthorized = requireVerifiedSession(request);
+  if (unauthorized) return unauthorized;
+
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');

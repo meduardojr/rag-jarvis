@@ -17,7 +17,7 @@ interface JarvisContextType {
   theme: 'light' | 'dark' | 'system';
   setTheme: (theme: 'light' | 'dark' | 'system') => Promise<void>;
   verifyPassword: (password: string) => Promise<boolean>;
-  logout: () => void;
+  logout: () => Promise<void>;
   refreshData: () => Promise<void>;
 }
 
@@ -46,6 +46,10 @@ export function JarvisProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     loadData();
+    fetch('/api/auth/verify')
+      .then((response) => response.ok ? response.json() : { verified: false })
+      .then((session) => setPasswordVerified(session.verified === true))
+      .catch(() => setPasswordVerified(false));
   }, []);
 
   const loadKnowledgeEntries = async () => {
@@ -121,9 +125,12 @@ export function JarvisProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const logout = () => {
-    document.cookie = 'jarvis-session=; Max-Age=0; Path=/;';
-    setPasswordVerified(false);
+  const logout = async () => {
+    try {
+      await fetch('/api/auth/verify', { method: 'DELETE' });
+    } finally {
+      setPasswordVerified(false);
+    }
   };
 
   const addKnowledgeEntry = async (entry: any) => {

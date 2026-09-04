@@ -1,6 +1,15 @@
 import { sql } from '@/db';
 import { NextRequest, NextResponse } from 'next/server';
 
+const SESSION_COOKIE = 'jarvis-session';
+
+// GET - Restore an existing password-verified session
+export async function GET(request: NextRequest) {
+  return NextResponse.json({
+    verified: request.cookies.get(SESSION_COOKIE)?.value === 'verified',
+  });
+}
+
 // POST - Verify password and create session
 export async function POST(request: NextRequest) {
   try {
@@ -34,7 +43,7 @@ export async function POST(request: NextRequest) {
     const expires = new Date(Date.now() + sessionTimeout * 60 * 1000);
 
     const response = NextResponse.json({ success: true });
-    response.cookies.set('jarvis-session', 'verified', {
+    response.cookies.set(SESSION_COOKIE, 'verified', {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
@@ -50,6 +59,19 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+// DELETE - End the current password-verified session
+export async function DELETE() {
+  const response = NextResponse.json({ success: true });
+  response.cookies.set(SESSION_COOKIE, '', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 0,
+    path: '/',
+  });
+  return response;
 }
 
 // Verify password using bcrypt

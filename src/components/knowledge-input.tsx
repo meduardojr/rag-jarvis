@@ -9,6 +9,7 @@ import {
   Check,
   X,
   FileText,
+  Lock,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -35,7 +36,13 @@ const CATEGORIES = [
 ] as const;
 
 export function KnowledgeInput() {
-  const { knowledgeEntries, addKnowledgeEntry, updateKnowledgeEntry, deleteKnowledgeEntry } = useJarvis();
+  const {
+    isPasswordVerified,
+    knowledgeEntries,
+    addKnowledgeEntry,
+    updateKnowledgeEntry,
+    deleteKnowledgeEntry,
+  } = useJarvis();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [category, setCategory] = useState<string>('Stack');
@@ -50,6 +57,11 @@ export function KnowledgeInput() {
   ]));
 
   const handleAddEntry = async () => {
+    if (!isPasswordVerified) {
+      toast.error('Verify your password in Settings before adding an entry');
+      return;
+    }
+
     if (!title.trim() || !content.trim()) {
       toast.error('Please fill in title and content');
       return;
@@ -76,6 +88,11 @@ export function KnowledgeInput() {
   };
 
   const handleUpdateEntry = async () => {
+    if (!isPasswordVerified) {
+      toast.error('Verify your password in Settings before updating an entry');
+      return;
+    }
+
     if (!editingId || !title.trim() || !content.trim()) {
       toast.error('Please fill in title and content');
       return;
@@ -146,6 +163,11 @@ export function KnowledgeInput() {
   };
 
   const handleDeleteEntry = async (id: string) => {
+    if (!isPasswordVerified) {
+      toast.error('Verify your password in Settings before deleting an entry');
+      return;
+    }
+
     try {
       await deleteKnowledgeEntry(id);
       toast.success('Entry deleted');
@@ -168,6 +190,12 @@ export function KnowledgeInput() {
         <p className="text-sm text-muted-foreground">
           Capture your technical knowledge, preferences, and conventions
         </p>
+        {!isPasswordVerified && (
+          <div className="flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
+            <Lock className="h-3.5 w-3.5 shrink-0" />
+            Verify your password in Settings to add or modify entries.
+          </div>
+        )}
       </div>
 
       <div className="space-y-4">
@@ -255,7 +283,7 @@ export function KnowledgeInput() {
             <div className="flex gap-2 flex-1">
               <Button
                 onClick={handleUpdateEntry}
-                disabled={isAdding}
+                disabled={isAdding || !isPasswordVerified}
                 className="flex-1 ai-primary"
               >
                 {isAdding ? (
@@ -281,13 +309,18 @@ export function KnowledgeInput() {
           ) : (
             <Button
               onClick={handleAddEntry}
-              disabled={isAdding}
+              disabled={isAdding || !isPasswordVerified}
               className="flex-1 ai-primary"
             >
               {isAdding ? (
                 <>
                   <Check className="h-4 w-4 mr-2 animate-spin" />
                   Adding...
+                </>
+              ) : !isPasswordVerified ? (
+                <>
+                  <Lock className="h-4 w-4 mr-2" />
+                  Password Required
                 </>
               ) : (
                 <>
@@ -330,6 +363,7 @@ export function KnowledgeInput() {
                       variant="ghost"
                       size="icon"
                       onClick={() => handleEditEntry(entry)}
+                      disabled={!isPasswordVerified}
                       className="h-8 w-8"
                     >
                       <Edit className="h-4 w-4 text-indigo-500 hover:text-indigo-600" />
@@ -338,6 +372,7 @@ export function KnowledgeInput() {
                       variant="ghost"
                       size="icon"
                       onClick={() => handleDeleteEntry(entry.id)}
+                      disabled={!isPasswordVerified}
                       className="h-8 w-8"
                     >
                       <Trash2 className="h-4 w-4 text-indigo-500 hover:text-indigo-600" />
