@@ -33,20 +33,20 @@ export async function GET() {
     const { hasMetadata, hasTags } = await getKnowledgeColumns();
     const entries = hasMetadata
       ? await sql`
-          SELECT id, title, content, category, tags, source_type, chunked, created_at, updated_at
+          SELECT id, title, content, category, tags, source_type, is_chunked, created_at, updated_at
           FROM public.knowledge_entries
           ORDER BY created_at DESC
         `
       : hasTags
         ? await sql`
             SELECT id, title, content, 'Stack' AS category, tags,
-              'manual' AS source_type, chunked, created_at, updated_at
+              'manual' AS source_type, is_chunked, created_at, updated_at
             FROM public.knowledge_entries
             ORDER BY created_at DESC
           `
         : await sql`
             SELECT id, title, content, 'Stack' AS category, ARRAY[]::text[] AS tags,
-              'manual' AS source_type, chunked, created_at, updated_at
+              'manual' AS source_type, is_chunked, created_at, updated_at
             FROM public.knowledge_entries
             ORDER BY created_at DESC
           `;
@@ -61,7 +61,7 @@ export async function GET() {
   }
 }
 
-// POST - Create a new knowledge entry with automatic chunking
+// POST - Create a new knowledge entry
 export async function POST(request: NextRequest) {
   const unauthorized = requireVerifiedSession(request);
   if (unauthorized) return unauthorized;
@@ -88,22 +88,22 @@ export async function POST(request: NextRequest) {
     const { hasMetadata, hasTags } = await getKnowledgeColumns();
     const [entry] = hasMetadata
       ? await sql`
-          INSERT INTO public.knowledge_entries (title, content, category, tags, source_type, chunked)
-          VALUES (${title}, ${content}, ${category || 'Stack'}, ${tags}, ${source_type}, true)
-          RETURNING id, title, content, category, tags, source_type, chunked, created_at, updated_at
+          INSERT INTO public.knowledge_entries (title, content, category, tags, source_type)
+          VALUES (${title}, ${content}, ${category || 'Stack'}, ${tags}, ${source_type})
+          RETURNING id, title, content, category, tags, source_type, is_chunked, created_at, updated_at
         `
       : hasTags
         ? await sql`
-            INSERT INTO public.knowledge_entries (title, content, tags, chunked)
-            VALUES (${title}, ${content}, ${tags}, true)
+            INSERT INTO public.knowledge_entries (title, content, tags)
+            VALUES (${title}, ${content}, ${tags})
             RETURNING id, title, content, 'Stack' AS category, tags,
-              'manual' AS source_type, chunked, created_at, updated_at
+              'manual' AS source_type, is_chunked, created_at, updated_at
           `
         : await sql`
-            INSERT INTO public.knowledge_entries (title, content, chunked)
-            VALUES (${title}, ${content}, true)
+            INSERT INTO public.knowledge_entries (title, content)
+            VALUES (${title}, ${content})
             RETURNING id, title, content, 'Stack' AS category, ARRAY[]::text[] AS tags,
-              'manual' AS source_type, chunked, created_at, updated_at
+              'manual' AS source_type, is_chunked, created_at, updated_at
           `;
 
     if (!entry) {
@@ -111,38 +111,34 @@ export async function POST(request: NextRequest) {
     }
 
     // Chunk the content (simple fixed-size chunking ~400 tokens)
-    let chunked = true;
+    let chunkingSucceeded = false;
     try {
       const chunks = chunkText(content, 400);
-      
-      // Generate embeddings and store chunks
       for (let i = 0; i < chunks.length; i++) {
         const embedding = await generateEmbedding(chunks[i]);
-        
         await sql`
           INSERT INTO public.chunks (entry_id, chunk_text, chunk_index, embedding)
           VALUES (${entry.id}, ${chunks[i]}, ${i}, ${embedding}::vector)
         `;
       }
+      chunkingSucceeded = true;
     } catch (chunkError) {
-      console.error('Chunking failed:', chunkError);
-      chunked = false;
-      // Update entry to mark as not chunked
-      await sql`
-        UPDATE public.knowledge_entries
-        SET chunked = false
-        WHERE id = ${entry.id}
-      `;
-      // Refresh entry to get updated chunked value
-      const [updatedEntry] = await sql`
-        SELECT id, title, content, category, tags, source_type, chunked, created_at, updated_at
-        FROM public.knowledge_entries
-        WHERE id = ${entry.id}
-      `;
-      return NextResponse.json(updatedEntry, { status: 201 });
+      console.error('Chunking failed for entry', entry.id, chunkError);
+      // entry still gets saved — is_chunked stays false, user can retry
     }
 
-    return NextResponse.json(entry, { status: 201 });
+    await sql`
+      UPDATE public.knowledge_entries SET is_chunked = ${chunkingSucceeded} WHERE id = ${entry.id}
+    `;
+
+    // Fetch updated entry to return correct is_chunked value
+    const [updatedEntry] = await sql`
+      SELECT id, title, content, category, tags, source_type, is_chunked, created_at, updated_at
+      FROM public.knowledge_entries
+      WHERE id = ${entry.id}
+    `;
+
+    return NextResponse.json(updatedEntry, { status: 201 });
   } catch (error) {
     console.error('Error creating knowledge entry:', error);
     return NextResponse.json(
@@ -188,7 +184,7 @@ export async function PUT(request: NextRequest) {
             category = COALESCE(${category}, category),
             tags = ${tags}
           WHERE id = ${id}
-          RETURNING id, title, content, category, tags, source_type, chunked, created_at, updated_at
+          RETURNING id, title, content, category, tags, source_type, is_chunked, created_at, updated_at
         `
       : hasTags
         ? await sql`
@@ -199,7 +195,7 @@ export async function PUT(request: NextRequest) {
               tags = ${tags}
             WHERE id = ${id}
             RETURNING id, title, content, 'Stack' AS category, tags,
-              'manual' AS source_type, chunked, created_at, updated_at
+              'manual' AS source_type, is_chunked, created_at, updated_at
           `
         : await sql`
             UPDATE public.knowledge_entries
@@ -208,7 +204,7 @@ export async function PUT(request: NextRequest) {
               content = COALESCE(${content}, content)
             WHERE id = ${id}
             RETURNING id, title, content, 'Stack' AS category, ARRAY[]::text[] AS tags,
-              'manual' AS source_type, chunked, created_at, updated_at
+              'manual' AS source_type, is_chunked, created_at, updated_at
           `;
 
     if (!entry) {
@@ -232,15 +228,22 @@ export async function PUT(request: NextRequest) {
         `;
       }
       
-      // Ensure chunked flag is true after successful re-chunking
+      // Ensure is_chunked flag is true after successful re-chunking
       await sql`
         UPDATE public.knowledge_entries
-        SET chunked = true
+        SET is_chunked = true
         WHERE id = ${id}
       `;
     }
 
-    return NextResponse.json(entry);
+    // Fetch updated entry to return correct is_chunked value
+    const [updatedEntry] = await sql`
+      SELECT id, title, content, category, tags, source_type, is_chunked, created_at, updated_at
+      FROM public.knowledge_entries
+      WHERE id = ${id}
+    `;
+
+    return NextResponse.json(updatedEntry);
   } catch (error) {
     console.error('Error updating knowledge entry:', error);
     return NextResponse.json(
