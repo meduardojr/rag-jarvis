@@ -209,6 +209,13 @@ Free tier models (Gemini Flash, Groq Llama) work without password verification.
 - Paid model options + password gate
 - Retrieved sources display
 
+### Phase 2.5 - Chunking Reliability 🚧
+- chunked status flag (fixed: single source of truth, correct default, backfilled) ✅
+- Retroactive chunking API — chunk-all + per-entry chunk endpoints ✅
+- Root-cause fix for embedding pipeline failure (currently failing for all entries — pending) ⬜
+- Frontend: unchunked badge on entry list ⬜
+- Frontend: "Chunk Now" (single) + "Chunk All" (bulk) buttons wired to existing endpoints ⬜
+
 ### Phase 3 - Polish 🚧
 - History view with model tracking
 - File upload ingestion (.md/.pdf)
