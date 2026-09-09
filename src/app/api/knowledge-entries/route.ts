@@ -33,20 +33,20 @@ export async function GET() {
     const { hasMetadata, hasTags } = await getKnowledgeColumns();
     const entries = hasMetadata
       ? await sql`
-          SELECT id, title, content, category, tags, source_type, is_chunked, created_at, updated_at
+          SELECT id, title, content, category, tags, source_type, chunked, created_at, updated_at
           FROM public.knowledge_entries
           ORDER BY created_at DESC
         `
       : hasTags
         ? await sql`
             SELECT id, title, content, 'Stack' AS category, tags,
-              'manual' AS source_type, is_chunked, created_at, updated_at
+              'manual' AS source_type, chunked, created_at, updated_at
             FROM public.knowledge_entries
             ORDER BY created_at DESC
           `
         : await sql`
             SELECT id, title, content, 'Stack' AS category, ARRAY[]::text[] AS tags,
-              'manual' AS source_type, is_chunked, created_at, updated_at
+              'manual' AS source_type, chunked, created_at, updated_at
             FROM public.knowledge_entries
             ORDER BY created_at DESC
           `;
@@ -90,20 +90,20 @@ export async function POST(request: NextRequest) {
       ? await sql`
           INSERT INTO public.knowledge_entries (title, content, category, tags, source_type)
           VALUES (${title}, ${content}, ${category || 'Stack'}, ${tags}, ${source_type})
-          RETURNING id, title, content, category, tags, source_type, is_chunked, created_at, updated_at
+          RETURNING id, title, content, category, tags, source_type, chunked, created_at, updated_at
         `
       : hasTags
         ? await sql`
             INSERT INTO public.knowledge_entries (title, content, tags)
             VALUES (${title}, ${content}, ${tags})
             RETURNING id, title, content, 'Stack' AS category, tags,
-              'manual' AS source_type, is_chunked, created_at, updated_at
+              'manual' AS source_type, chunked, created_at, updated_at
           `
         : await sql`
             INSERT INTO public.knowledge_entries (title, content)
             VALUES (${title}, ${content})
             RETURNING id, title, content, 'Stack' AS category, ARRAY[]::text[] AS tags,
-              'manual' AS source_type, is_chunked, created_at, updated_at
+              'manual' AS source_type, chunked, created_at, updated_at
           `;
 
     if (!entry) {
@@ -124,16 +124,16 @@ export async function POST(request: NextRequest) {
       chunkingSucceeded = true;
     } catch (chunkError) {
       console.error('Chunking failed for entry', entry.id, chunkError);
-      // entry still gets saved — is_chunked stays false, user can retry
+      // entry still gets saved — chunked stays false, user can retry
     }
 
     await sql`
-      UPDATE public.knowledge_entries SET is_chunked = ${chunkingSucceeded} WHERE id = ${entry.id}
+      UPDATE public.knowledge_entries SET chunked = ${chunkingSucceeded} WHERE id = ${entry.id}
     `;
 
-    // Fetch updated entry to return correct is_chunked value
+    // Fetch updated entry to return correct chunked value
     const [updatedEntry] = await sql`
-      SELECT id, title, content, category, tags, source_type, is_chunked, created_at, updated_at
+      SELECT id, title, content, category, tags, source_type, chunked, created_at, updated_at
       FROM public.knowledge_entries
       WHERE id = ${entry.id}
     `;
@@ -184,7 +184,7 @@ export async function PUT(request: NextRequest) {
             category = COALESCE(${category}, category),
             tags = ${tags}
           WHERE id = ${id}
-          RETURNING id, title, content, category, tags, source_type, is_chunked, created_at, updated_at
+          RETURNING id, title, content, category, tags, source_type, chunked, created_at, updated_at
         `
       : hasTags
         ? await sql`
@@ -195,7 +195,7 @@ export async function PUT(request: NextRequest) {
               tags = ${tags}
             WHERE id = ${id}
             RETURNING id, title, content, 'Stack' AS category, tags,
-              'manual' AS source_type, is_chunked, created_at, updated_at
+              'manual' AS source_type, chunked, created_at, updated_at
           `
         : await sql`
             UPDATE public.knowledge_entries
@@ -204,7 +204,7 @@ export async function PUT(request: NextRequest) {
               content = COALESCE(${content}, content)
             WHERE id = ${id}
             RETURNING id, title, content, 'Stack' AS category, ARRAY[]::text[] AS tags,
-              'manual' AS source_type, is_chunked, created_at, updated_at
+              'manual' AS source_type, chunked, created_at, updated_at
           `;
 
     if (!entry) {
@@ -228,17 +228,17 @@ export async function PUT(request: NextRequest) {
         `;
       }
       
-      // Ensure is_chunked flag is true after successful re-chunking
+      // Ensure chunked flag is true after successful re-chunking
       await sql`
         UPDATE public.knowledge_entries
-        SET is_chunked = true
+        SET chunked = true
         WHERE id = ${id}
       `;
     }
 
-    // Fetch updated entry to return correct is_chunked value
+    // Fetch updated entry to return correct chunked value
     const [updatedEntry] = await sql`
-      SELECT id, title, content, category, tags, source_type, is_chunked, created_at, updated_at
+      SELECT id, title, content, category, tags, source_type, chunked, created_at, updated_at
       FROM public.knowledge_entries
       WHERE id = ${id}
     `;

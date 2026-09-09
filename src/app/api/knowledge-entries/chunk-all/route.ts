@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
   if (unauthorized) return unauthorized;
 
   const unchunked = await sql`
-    SELECT id, content FROM public.knowledge_entries WHERE is_chunked = false
+    SELECT id, content FROM public.knowledge_entries WHERE chunked = false
   `;
 
   const results = [];
@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
           VALUES (${entry.id}, ${chunks[i]}, ${i}, ${embedding}::vector)
         `;
       }
-      await sql`UPDATE public.knowledge_entries SET is_chunked = true WHERE id = ${entry.id}`;
+      await sql`UPDATE public.knowledge_entries SET chunked = true WHERE id = ${entry.id}`;
       results.push({ id: entry.id, success: true });
     } catch (error) {
       results.push({ id: entry.id, success: false, error: String(error) });

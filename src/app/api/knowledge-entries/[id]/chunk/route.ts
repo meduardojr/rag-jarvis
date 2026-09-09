@@ -34,7 +34,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       `;
     }
 
-    await sql`UPDATE public.knowledge_entries SET is_chunked = true WHERE id = ${id}`;
+    await sql`UPDATE public.knowledge_entries SET chunked = true WHERE id = ${id}`;
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Retroactive chunking failed:', error);
