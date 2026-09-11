@@ -10,7 +10,7 @@ When using AI coding tools, you repeatedly re-explain your stack, conventions, a
 
 ## Features
 
-### 5.1 Knowledge Base Ingestion
+### 1.1 Knowledge Base Ingestion
 - ✅ Manual text entry (title + content + tags)
 - ✅ File upload (`.md`, `.txt`, `.pdf`) - coming soon
 - ✅ Paste-in quick capture
@@ -19,47 +19,47 @@ When using AI coding tools, you repeatedly re-explain your stack, conventions, a
 - ✅ Searchable/filterable by tag
 - ✅ Password required for write operations
 
-### 5.2 Chunking & Embedding Pipeline
+### 1.2 Chunking & Embedding Pipeline
 - ✅ Automatic semantic chunking (~400 tokens)
 - ✅ Vector embeddings stored with pgvector
 - ✅ Metadata: source title, tag, date added
 - ✅ Similarity search for retrieval
 
-### 5.3 Chat / Ask Interface
+### 1.3 Chat / Ask Interface
 - ✅ Natural language questions
 - ✅ **Prompt-generation mode** - generates structured, tool-ready prompts
 - ✅ Shows retrieved knowledge chunks for transparency
 
-### 5.4 Prompt Templates
+### 1.4 Prompt Templates
 - ✅ Claude-style (detailed, XML-tagged)
 - ✅ Bolt/v0-style (concise, UI-focused)
 - ✅ Cursor/Copilot-style (code-context focused)
 - ✅ General AI template
 
-### 5.5 History
+### 1.5 History
 - ✅ Save past generated prompts
 - ✅ View, copy, regenerate with tweaks
 - ✅ Model used tracking for traceability
 
-### 5.6 Out-of-Scope Detection
+### 1.6 Out-of-Scope Detection
 - ✅ Similarity-score threshold on retrieval
 - ✅ Clear messaging when topic not in knowledge base
 - ✅ Suggestions to add relevant notes
 
-### 5.7 Selectable LLM Model
+### 1.7 Selectable LLM Model
 - ✅ User-selectable per request or default in settings
 - ✅ Free tier: Gemini Flash, Groq-hosted models
 - ✅ Paid tier: Claude, GPT, DeepSeek, Qwen
 - ✅ Separate selection for embeddings vs generation
 
-### 5.8 Password Protection
+### 1.8 Password Protection
 - ✅ Password gate for adding/editing knowledge entries
 - ✅ Password gate for paid model usage
 - ✅ Session-based verification (30-min timeout, configurable)
 - ✅ Rate limiting on password attempts (5 attempts = cooldown)
 - ✅ Password hash stored (bcrypt compatible)
 
-### 5.9 Branching Decision Scoring
+### 1.9 Branching Decision Scoring
 - ✅ Log preference choices per category
 - ✅ Score based on frequency + recency (decay function)
 - ✅ Auto-pick when threshold exceeded (90% + min sample)
@@ -195,39 +195,6 @@ Free tier models (Gemini Flash, Groq Llama) work without password verification.
 | Time to generate prompt | < 30 seconds |
 | Prompt acceptance rate | > 80% |
 | Retrieval accuracy | > 90% (spot-check) |
-
-## Roadmap
-
-### Phase 1 - MVP ✅
-- Manual knowledge entry (CRUD), password-gated
-- Neon setup with pgvector, embedding pipeline
-- Basic ask/answer using free-tier model
-
-### Phase 2 - Prompt Generation + Paid Models ✅
-- Target-tool templates (Claude / Bolt / Cursor)
-- Structured prompt output mode
-- Paid model options + password gate
-- Retrieved sources display
-
-### Phase 2.5 - Chunking Reliability 🚧
-- chunked status flag (fixed: single source of truth, correct default, backfilled) ✅
-- Retroactive chunking API — chunk-all + per-entry chunk endpoints ✅
-- Root-cause fix for embedding pipeline failure (currently failing for all entries — pending) ⬜
-- Frontend: unchunked badge on entry list ⬜
-- Frontend: "Chunk Now" (single) + "Chunk All" (bulk) buttons wired to existing endpoints ⬜
-
-### Phase 3 - Polish 🚧
-- History view with model tracking
-- File upload ingestion (.md/.pdf)
-- Export/import knowledge base
-- Tag filtering + search UI
-- Session expiry + rate limiting
-
-### Phase 4 - Future
-- Agentic mode (multi-step retrieval)
-- Browser extension for quick capture
-- Auto-ingest from GitHub, Notion, Obsidian
-- Multi-user auth (if needed)
 
 ## Security Notes
 

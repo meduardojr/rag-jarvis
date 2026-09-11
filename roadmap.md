@@ -24,6 +24,12 @@ This document outlines the planned, in-progress, and completed features for the 
   - Added endpoints for manual chunking:
     - `POST /api/knowledge-entries/[id]/chunk` (chunk now)
     - `POST /api/knowledge-entries/chunk-all` (bulk chunk unchunked entries)
+- ✅ Neon setup with pgvector, embedding pipeline
+- ✅ Basic ask/answer using free-tier model
+- ✅ Target-tool templates (Claude / Bolt / Cursor)
+- ✅ Structured prompt output mode
+- ✅ Paid model options + password gate
+- ✅ Retrieved sources display
 
 ## In Progress
 - 🚧 UI indicators for chunking status (badge/showing "unchunked" entries)
@@ -31,14 +37,23 @@ This document outlines the planned, in-progress, and completed features for the 
 - 🚧 Improved error reporting for chunking/embedding failures
 - 🚧 Pagination and search/filtering for knowledge entries list
 - 🚧 Tag management UI enhancements
+- 🚧 Root-cause fix for embedding pipeline failure
+- 🚧 Frontend: "Chunk Now" (single) + "Chunk All" (bulk) buttons wired to existing endpoints
+- 🚧 History view with model tracking
+- 🚧 File upload ingestion (.md/.pdf)
+- 🚧 Export/import knowledge base
+- 🚧 Session expiry + rate limiting
 
 ## Upcoming
-- 🔜 Export/import knowledge base (JSON/Markdown)
 - 🔜 Version history for knowledge entries
 - 🔜 Advanced search with semantic similarity
 - 🔜 Integration with additional AI models/providers
 - 🔜 User authentication and multi‑user support
 - 🔜 Analytics dashboard (usage, popular entries, etc.)
+- 🔜 Agentic mode (multi-step retrieval)
+- 🔜 Browser extension for quick capture
+- 🔜 Auto-ingest from GitHub, Notion, Obsidian
+- 🔜 Multi-user auth (if needed)
 
 ## Notes
 - This roadmap is updated whenever there is a significant change related to planned features.
