@@ -102,11 +102,12 @@ async function callGroq(systemPrompt: string, userPrompt: string, apiKey: string
   });
 
   if (!response.ok) {
-    throw new Error(`Groq API error: ${response.status}`);
-
-  const data = await response.json();
-  return data.choices?.[0]?.message?.content || 'Failed to generate answer';
-}
+      throw new Error(`Groq API error: ${response.status}`);
+    }
+  
+    const data = await response.json();
+    return data.choices?.[0]?.message?.content || 'Failed to generate answer';
+  }
 
 // Function to extract redaction note from content
 function extractRedactionNote(content: string): string | null {

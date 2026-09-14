@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { ArrowUpIcon } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 
 export function AboutMeChat() {
@@ -91,8 +90,7 @@ export function AboutMeChat() {
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
             rows={2}
-            maxRows={4}
-            className="flex-1 resize-none glass-panel-hover"
+            className="flex-1 resize-none glass-panel-hover h-[3.5rem] min-h-[3.5rem] overflow-y-auto"
             disabled={isLoading}
           />
           <Button
