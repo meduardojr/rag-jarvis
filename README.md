@@ -66,6 +66,14 @@ When using AI coding tools, you repeatedly re-explain your stack, conventions, a
 - ✅ Demoted options shown as alternatives
 - ✅ Configurable threshold and sample size
 
+### 1.10 About Me Chat
+- ✅ Constrained Q&A mode scoped to questions about the user's own knowledge base
+- ✅ Two-step pipeline: lightweight classification (in-scope/out-of-scope) then grounded answer generation
+- ✅ Automatic scope rejection for unrelated questions with configurable message
+- ✅ Owner vs. visitor recognition via existing password session (jarvis-session cookie)
+- ✅ In-content redaction notes using `REDACTION:` convention for visitor-specific filtering
+- ✅ Full question logging to `about_me_chat_log` table (question, scope, answer, owner status, timestamp)
+
 ## Tech Stack
 
 | Layer | Choice |
@@ -122,6 +130,7 @@ On first run, JARVIS will automatically create the required tables:
 - `app_settings` - Configuration and password hash
 - `preference_choices` - Branching decision logs
 - `password_attempts` - Rate limiting
+- `about_me_chat_log` - Log of about-me chat interactions
 
 ## API Endpoints
 
@@ -146,6 +155,38 @@ Request body:
   "query": "Create a REST API for user auth",
   "target_tool": "claude",
   "model": "gemini-2.0-flash"
+}
+```
+
+### About Me Chat
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/about-me-chat` | Ask a question about the user's knowledge base (stack, skills, projects) |
+
+Request body:
+```json
+{
+  "question": "What is my preferred backend stack?",
+  "model": "gemini-2.0-flash" // optional, defaults to gemini-2.0-flash
+}
+```
+
+Response body (in-scope):
+```json
+{
+  "answer": "Based on your knowledge base, I prefer using FastAPI with Postgres...",
+  "in_scope": true,
+  "is_owner": true
+}
+```
+
+Response body (out-of-scope):
+```json
+{
+  "answer": "I'm designed to answer questions about your technical knowledge base, skills, past projects, and what you know/do. Please ask a question related to your own expertise.",
+  "in_scope": false,
+  "is_owner": false
 }
 ```
 

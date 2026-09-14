@@ -9,6 +9,7 @@ import { KnowledgeInput } from '@/components/knowledge-input';
 import { PromptGenerator } from '@/components/prompt-generator';
 import { HistoryPanel } from '@/components/history-panel';
 import { SettingsPanel } from '@/components/settings-panel';
+import { AboutMeChat } from '@/components/about-me-chat';
 import { Button } from '@/components/ui/button';
 import {
   KnowledgeInputSkeleton,
@@ -85,8 +86,17 @@ export default function Home() {
           </motion.div>
         )}
 
+        {/* About Me Chat - New Hero Section */}
+        <motion.div
+          {...fadeIn}
+          transition={{ duration: 0.6, delay: 0.1 }}
+          className="mb-8 lg:mb-12"
+        >
+          <AboutMeChat />
+        </motion.div>
+
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-          {/* Left Column - Hero */}
+          {/* Left Column - Hero (now moved to above, but we keep the existing content? We'll keep it as is for now, but note: the requirement says preserve existing sections. We are not removing it, just moving the AboutMeChat above. The existing left column is still here. */}
           <motion.div
             {...fadeIn}
             transition={{ duration: 0.6, delay: 0.1 }}

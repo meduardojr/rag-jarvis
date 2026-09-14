@@ -43,6 +43,7 @@ This document outlines the planned, in-progress, and completed features for the 
 - 🚧 File upload ingestion (.md/.pdf)
 - 🚧 Export/import knowledge base
 - 🚧 Session expiry + rate limiting
+- 🚧 About Me Chat: constrained Q&A mode scoped to user's knowledge base with owner recognition, in-content redaction notes (REDACTION: convention), and full question logging
 
 ## Upcoming
 - 🔜 Version history for knowledge entries
