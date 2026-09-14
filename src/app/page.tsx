@@ -86,17 +86,8 @@ export default function Home() {
           </motion.div>
         )}
 
-        {/* About Me Chat - New Hero Section */}
-        <motion.div
-          {...fadeIn}
-          transition={{ duration: 0.6, delay: 0.1 }}
-          className="mb-8 lg:mb-12"
-        >
-          <AboutMeChat />
-        </motion.div>
-
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-          {/* Left Column - Hero (now moved to above, but we keep the existing content? We'll keep it as is for now, but note: the requirement says preserve existing sections. We are not removing it, just moving the AboutMeChat above. The existing left column is still here. */}
+          {/* Left Column - Hero */}
           <motion.div
             {...fadeIn}
             transition={{ duration: 0.6, delay: 0.1 }}
@@ -127,6 +118,11 @@ export default function Home() {
                   💾 Self-hosted data
                 </span>
               </div>
+            </div>
+
+            {/* About Me Chat - placed below the animated section */}
+            <div className="mt-6">
+              <AboutMeChat />
             </div>
           </motion.div>
 
