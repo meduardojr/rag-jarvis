@@ -8,6 +8,12 @@ interface JarvisContextType {
   isLoading: boolean;
   error: string | null;
   knowledgeEntries: Array<any>;
+  totalEntries: number;
+  currentPage: number;
+  pageSize: number;
+  setPage: (page: number) => void;
+  nextPage: () => void;
+  prevPage: () => void;
   addKnowledgeEntry: (entry: any) => Promise<void>;
   updateKnowledgeEntry: (id: string, entry: any) => Promise<void>;
   deleteKnowledgeEntry: (id: string) => Promise<void>;
@@ -28,6 +34,9 @@ export function JarvisProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [knowledgeEntries, setKnowledgeEntries] = useState<Array<any>>([]);
+  const [totalEntries, setTotalEntries] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10); // default page size
   const [generatedPrompts, setGeneratedPrompts] = useState<Array<any>>([]);
   const [theme, setThemeState] = useState<'light' | 'dark' | 'system'>('system');
 
@@ -53,13 +62,30 @@ export function JarvisProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const loadKnowledgeEntries = async () => {
+    return await fetchKnowledgeEntries(currentPage, pageSize);
+  };
+
+  const fetchKnowledgeEntries = async (page: number, limit: number): Promise<boolean> => {
     try {
-      const response = await fetch('/api/knowledge-entries');
+      const response = await fetch(`/api/knowledge-entries?page=${page}&limit=${limit}`);
       if (!response.ok) return false;
 
       const data = await response.json();
-      setKnowledgeEntries(Array.isArray(data) ? data : []);
-      return true;
+      // Expecting { entries: any[], total: number, page: number, limit: number }
+      if (data && Array.isArray(data.entries)) {
+        setKnowledgeEntries(data.entries);
+        setTotalEntries(data.total ?? 0);
+        setCurrentPage(data.page ?? page);
+        setPageSize(data.limit ?? limit);
+        return true;
+      } else {
+        // fallback if old format
+        setKnowledgeEntries(Array.isArray(data) ? data : []);
+        setTotalEntries(Array.isArray(data) ? data.length : 0);
+        setCurrentPage(page);
+        setPageSize(limit);
+        return true;
+      }
     } catch {
       return false;
     }
@@ -143,7 +169,7 @@ export function JarvisProvider({ children }: { children: ReactNode }) {
     });
     if (response.ok) {
       const data = await response.json();
-      await loadKnowledgeEntries();
+      await loadKnowledgeEntries(); // refresh current page
       return data;
     } else {
       const errorData = await response.json();
@@ -161,7 +187,7 @@ export function JarvisProvider({ children }: { children: ReactNode }) {
     });
     if (response.ok) {
       const data = await response.json();
-      await loadKnowledgeEntries();
+      await loadKnowledgeEntries(); // refresh current page
       return data;
     } else {
       const errorData = await response.json();
@@ -174,7 +200,7 @@ export function JarvisProvider({ children }: { children: ReactNode }) {
       method: 'DELETE',
     });
     if (response.ok) {
-      await loadKnowledgeEntries();
+      await loadKnowledgeEntries(); // refresh current page
     } else {
       const errorData = await response.json();
       throw new Error(errorData.error || 'Failed to delete knowledge entry');
@@ -252,6 +278,12 @@ export function JarvisProvider({ children }: { children: ReactNode }) {
       isLoading,
       error,
       knowledgeEntries,
+      totalEntries,
+      currentPage,
+      pageSize,
+      setPage: (page: number) => setCurrentPage(page),
+      nextPage: () => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(totalEntries / pageSize) || 1)),
+      prevPage: () => setCurrentPage(prev => Math.max(prev - 1, 1)),
       addKnowledgeEntry,
       updateKnowledgeEntry,
       deleteKnowledgeEntry,

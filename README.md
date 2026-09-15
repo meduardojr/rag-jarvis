@@ -74,6 +74,15 @@ When using AI coding tools, you repeatedly re-explain your stack, conventions, a
 - ✅ In-content redaction notes using `REDACTION:` convention for visitor-specific filtering
 - ✅ Full question logging to `about_me_chat_log` table (question, scope, answer, owner status, timestamp)
 
+### 1.11 Knowledge Base Viewing (Password‑Gated & Paginated)
+- ✅ Password required to view actual entry content (title, content, tags)
+- ✅ When unverified, API returns placeholder data (masked title, empty content/tags) to prevent leakage via network/DOM
+- ✅ Owner/visitor recognition via existing password session (same jarvis‑session cookie)
+- ✅ Pagination support with `page` and `limit` query parameters (default 10 per page)
+- ✅ UI shows locked/blurred treatment when unverified, normal list when verified
+- ✅ Tabs interface: "Add Entry" form vs. "Browse Knowledge Base" list
+- ✅ Full compatibility with existing add/edit/delete operations (still password‑gated for writes)
+
 ## Tech Stack
 
 | Layer | Choice |
@@ -138,7 +147,7 @@ On first run, JARVIS will automatically create the required tables:
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/knowledge-entries` | List all entries |
+| GET | `/api/knowledge-entries?page=1&limit=10` | List entries with pagination. Returns masked placeholder data when unverified; full data when verified. |
 | POST | `/api/knowledge-entries` | Create entry (auto-chunks & embeds) |
 | PUT | `/api/knowledge-entries?id=xxx` | Update entry |
 | DELETE | `/api/knowledge-entries?id=xxx` | Delete entry |
@@ -226,6 +235,7 @@ JARVIS uses two-tier password protection:
 
 1. **Knowledge Base Writes**: Adding, editing, or deleting entries requires password verification
 2. **Paid Model Usage**: Using Claude, GPT, or other paid models requires password verification
+3. **Knowledge Base Reads**: Viewing the knowledge base list (GET /api/knowledge-entries) requires password verification to see real content; unverified sessions receive only placeholder data.
 
 Free tier models (Gemini Flash, Groq Llama) work without password verification.
 

@@ -44,6 +44,7 @@ This document outlines the planned, in-progress, and completed features for the 
 - 🚧 Export/import knowledge base
 - 🚧 Session expiry + rate limiting
 - 🚧 About Me Chat: constrained Q&A mode scoped to user's knowledge base with owner recognition, in-content redaction notes (REDACTION: convention), and full question logging
+- 🚧 Password‑gated knowledge base viewing with pagination, tabs, and placeholder data for unverified sessions
 
 ## Upcoming
 - 🔜 Version history for knowledge entries

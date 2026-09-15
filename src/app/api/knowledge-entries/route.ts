@@ -11,6 +11,10 @@ function requireVerifiedSession(request: NextRequest) {
   );
 }
 
+function isVerifiedSession(request: NextRequest): boolean {
+  return request.cookies.get('jarvis-session')?.value === 'verified';
+}
+
 async function getKnowledgeColumns() {
   const columns = await sql`
     SELECT column_name
@@ -27,31 +31,61 @@ async function getKnowledgeColumns() {
   };
 }
 
-// GET - Fetch all knowledge entries
-export async function GET() {
+// GET - Fetch paginated knowledge entries (password-gated for content)
+export async function GET(request: NextRequest) {
   try {
     const { hasMetadata, hasTags } = await getKnowledgeColumns();
-    const entries = hasMetadata
-      ? await sql`
-          SELECT id, title, content, category, tags, source_type, chunked, created_at, updated_at
-          FROM public.knowledge_entries
-          ORDER BY created_at DESC
-        `
-      : hasTags
-        ? await sql`
-            SELECT id, title, content, 'Stack' AS category, tags,
-              'manual' AS source_type, chunked, created_at, updated_at
-            FROM public.knowledge_entries
-            ORDER BY created_at DESC
-          `
-        : await sql`
-            SELECT id, title, content, 'Stack' AS category, ARRAY[]::text[] AS tags,
-              'manual' AS source_type, chunked, created_at, updated_at
-            FROM public.knowledge_entries
-            ORDER BY created_at DESC
-          `;
 
-    return NextResponse.json(entries);
+    // Pagination params
+    const page = Math.max(parseInt(request.nextUrl.searchParams.get('page') ?? '1'), 1);
+    const limit = Math.min(Math.max(parseInt(request.nextUrl.searchParams.get('limit') ?? '10'), 1), 100); // clamp 1-100
+    const offset = (page - 1) * limit;
+
+    // Count total entries
+    const [{ count }] = await sql`SELECT COUNT(*) as count FROM public.knowledge_entries`;
+    const total = Number(count);
+
+    // Build base SELECT fields based on schema
+    let selectFields = 'id, title, content';
+    if (hasMetadata) {
+      selectFields += ', category, tags, source_type';
+    } else if (hasTags) {
+      selectFields += ", 'Stack' AS category, tags, 'manual' AS source_type";
+    } else {
+      selectFields += ", 'Stack' AS category, ARRAY[]::text[] AS tags, 'manual' AS source_type";
+    }
+    // Always include chunked, created_at, updated_at for consistency
+    selectFields += ', chunked, created_at, updated_at';
+
+    // Fetch entries with pagination
+    const entriesResult = await sql`
+      SELECT ${sql(selectFields)}
+      FROM public.knowledge_entries
+      ORDER BY created_at DESC
+      LIMIT ${limit} OFFSET ${offset}
+    `;
+
+    // If not verified, mask sensitive fields
+    const finalEntries = isVerifiedSession(request)
+      ? entriesResult
+      : entriesResult.map((entry: any) => ({
+          id: entry.id,
+          title: '•••••••',
+          content: '',
+          category: hasMetadata ? '•••••••' : 'Stack',
+          tags: hasMetadata || hasTags ? [] : [],
+          source_type: hasMetadata ? '•••••••' : 'manual',
+          chunked: entry.chunked ?? false,
+          created_at: entry.created_at ?? null,
+          updated_at: entry.updated_at ?? null,
+        }));
+
+    return NextResponse.json({
+      entries: finalEntries,
+      total,
+      page,
+      limit,
+    });
   } catch (error) {
     console.error('Error fetching knowledge entries:', error);
     return NextResponse.json(
