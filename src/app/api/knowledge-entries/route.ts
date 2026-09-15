@@ -36,9 +36,9 @@ export async function GET(request: NextRequest) {
   try {
     const { hasMetadata, hasTags } = await getKnowledgeColumns();
 
-    // Pagination params
+    // Pagination params: fixed page size = 5
     const page = Math.max(parseInt(request.nextUrl.searchParams.get('page') ?? '1'), 1);
-    const limit = Math.min(Math.max(parseInt(request.nextUrl.searchParams.get('limit') ?? '10'), 1), 100); // clamp 1-100
+    const limit = 5;
     const offset = (page - 1) * limit;
 
     // Count total entries
@@ -58,12 +58,9 @@ export async function GET(request: NextRequest) {
     selectFields += ', chunked, created_at, updated_at';
 
     // Fetch entries with pagination
-        const queryString = `SELECT ${selectFields} FROM public.knowledge_entries ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}`;
-        const strings = [queryString];
-        // @ts-ignore
-        strings.raw = [queryString];
-        // @ts-ignore
-        const entriesResult = await sql(strings as TemplateStringsArray);
+    const queryString = `SELECT ${selectFields} FROM public.knowledge_entries ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}`;
+    // @ts-ignore
+    const entriesResult = await sql([queryString] as TemplateStringsArray);
 
     // If not verified, mask sensitive fields
     const finalEntries = isVerifiedSession(request)

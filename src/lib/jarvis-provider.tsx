@@ -36,7 +36,7 @@ export function JarvisProvider({ children }: { children: ReactNode }) {
   const [knowledgeEntries, setKnowledgeEntries] = useState<Array<any>>([]);
   const [totalEntries, setTotalEntries] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10); // default page size
+  const pageSize = 5; // fixed page size
   const [generatedPrompts, setGeneratedPrompts] = useState<Array<any>>([]);
   const [theme, setThemeState] = useState<'light' | 'dark' | 'system'>('system');
 
@@ -67,7 +67,8 @@ export function JarvisProvider({ children }: { children: ReactNode }) {
 
   const fetchKnowledgeEntries = async (page: number, limit: number): Promise<boolean> => {
     try {
-      const response = await fetch(`/api/knowledge-entries?page=${page}&limit=${limit}`);
+      // We always request pageSize=5, ignore limit param from API (API will enforce 5)
+      const response = await fetch(`/api/knowledge-entries?page=${page}&limit=${pageSize}`);
       if (!response.ok) return false;
 
       const data = await response.json();
@@ -76,14 +77,13 @@ export function JarvisProvider({ children }: { children: ReactNode }) {
         setKnowledgeEntries(data.entries);
         setTotalEntries(data.total ?? 0);
         setCurrentPage(data.page ?? page);
-        setPageSize(data.limit ?? limit);
+        // pageSize is constant, no need to set
         return true;
       } else {
         // fallback if old format
         setKnowledgeEntries(Array.isArray(data) ? data : []);
         setTotalEntries(Array.isArray(data) ? data.length : 0);
         setCurrentPage(page);
-        setPageSize(limit);
         return true;
       }
     } catch {
