@@ -58,12 +58,12 @@ export async function GET(request: NextRequest) {
     selectFields += ', chunked, created_at, updated_at';
 
     // Fetch entries with pagination
-    const entriesResult = await sql`
-      SELECT ${sql(selectFields)}
-      FROM public.knowledge_entries
-      ORDER BY created_at DESC
-      LIMIT ${limit} OFFSET ${offset}
-    `;
+        const queryString = `SELECT ${selectFields} FROM public.knowledge_entries ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}`;
+        const strings = [queryString];
+        // @ts-ignore
+        strings.raw = [queryString];
+        // @ts-ignore
+        const entriesResult = await sql(strings as TemplateStringsArray);
 
     // If not verified, mask sensitive fields
     const finalEntries = isVerifiedSession(request)
