@@ -59,11 +59,8 @@ export async function GET(request: NextRequest) {
 
     // Fetch entries with pagination
     const queryString = `SELECT ${selectFields} FROM public.knowledge_entries ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}`;
-    const strings = [queryString];
     // @ts-ignore
-    strings.raw = [queryString];
-    // @ts-ignore
-    const entriesResult = await sql(strings as TemplateStringsArray); sql([queryString] as TemplateStringsArray);
+    const entriesResult = await sql([queryString] as TemplateStringsArray);
 
     // If not verified, mask sensitive fields
     const finalEntries = isVerifiedSession(request)
