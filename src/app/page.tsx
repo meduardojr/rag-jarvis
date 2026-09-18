@@ -110,10 +110,14 @@ export default function Home() {
           </div>
 
           {/* Tab Content */}
-          <div className="space-y-6">
-            <AboutMeChat hidden={activeTab !== 'about-me'} />
-            <PromptGeneratorTab hidden={activeTab !== 'prompt-generator'} />
-          </div>
+                    <div className="space-y-6">
+                      <div hidden={activeTab !== 'about-me'}>
+                        <AboutMeChat />
+                      </div>
+                      <div hidden={activeTab !== 'prompt-generator'}>
+                        <PromptGeneratorTab />
+                      </div>
+                    </div>
         </motion.div>
 
         {/* Settings Section */}
