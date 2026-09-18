@@ -5,8 +5,9 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 interface JarvisContextType {
   isPasswordVerified: boolean;
   setPasswordVerified: (verified: boolean) => void;
-  isLoading: boolean;
-  error: string | null;
+  isLoadingKnowledgeEntries: boolean;
+  isLoadingGeneratedPrompts: boolean;
+  isLoadingTheme: boolean;
   knowledgeEntries: Array<any>;
   totalEntries: number;
   currentPage: number;
@@ -31,8 +32,9 @@ const JarvisContext = createContext<JarvisContextType | undefined>(undefined);
 
 export function JarvisProvider({ children }: { children: ReactNode }) {
   const [isPasswordVerified, setPasswordVerified] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [isLoadingKnowledgeEntries, setIsLoadingKnowledgeEntries] = useState(false);
+  const [isLoadingGeneratedPrompts, setIsLoadingGeneratedPrompts] = useState(false);
+  const [isLoadingTheme, setIsLoadingTheme] = useState(false);
   const [knowledgeEntries, setKnowledgeEntries] = useState<Array<any>>([]);
   const [totalEntries, setTotalEntries] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
@@ -41,16 +43,37 @@ export function JarvisProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<'light' | 'dark' | 'system'>('system');
 
   const loadData = async () => {
-    setIsLoading(false);
-    setError(null);
-
-    const results = await Promise.all([
-      loadKnowledgeEntries(),
-      loadGeneratedPrompts(),
-      loadTheme(),
-    ]);
-
-    setIsLoading(!results.every(Boolean));
+    // Load each dataset independently with individual loading states
+    
+    // Load knowledge entries
+    setIsLoadingKnowledgeEntries(true);
+    try {
+      const success = await loadKnowledgeEntries();
+      setIsLoadingKnowledgeEntries(!success);
+    } catch (error) {
+      console.error('Failed to load knowledge entries:', error);
+      setIsLoadingKnowledgeEntries(true); // Keep loading state true on error so UI can show error
+    }
+    
+    // Load generated prompts
+    setIsLoadingGeneratedPrompts(true);
+    try {
+      const success = await loadGeneratedPrompts();
+      setIsLoadingGeneratedPrompts(!success);
+    } catch (error) {
+      console.error('Failed to load generated prompts:', error);
+      setIsLoadingGeneratedPrompts(true); // Keep loading state true on error
+    }
+    
+    // Load theme
+    setIsLoadingTheme(true);
+    try {
+      const success = await loadTheme();
+      setIsLoadingTheme(!success);
+    } catch (error) {
+      console.error('Failed to load theme:', error);
+      setIsLoadingTheme(true); // Keep loading state true on error
+    }
   };
 
   useEffect(() => {
@@ -275,8 +298,9 @@ export function JarvisProvider({ children }: { children: ReactNode }) {
     <JarvisContext.Provider value={{
       isPasswordVerified,
       setPasswordVerified,
-      isLoading,
-      error,
+      isLoadingKnowledgeEntries,
+      isLoadingGeneratedPrompts,
+      isLoadingTheme,
       knowledgeEntries,
       totalEntries,
       currentPage,

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Copy,
   Bot,
@@ -48,12 +48,33 @@ export function PromptGenerator() {
     Array<{ id: number; title: string; content: string; similarity: number }>
   >([]);
   const [error, setError] = useState<string | null>(null);
+  const [isKnowledgeEntriesLoading, setIsKnowledgeEntriesLoading] = useState(true);
+  const [hasCheckedKnowledgeEntries, setHasCheckedKnowledgeEntries] = useState(false);
+
+  // Track knowledge entries loading state
+  useEffect(() => {
+    if (!hasCheckedKnowledgeEntries) {
+      setIsKnowledgeEntriesLoading(true);
+    }
+    
+    // Check if we have knowledge entries data
+    if (knowledgeEntries !== undefined) {
+      setHasCheckedKnowledgeEntries(true);
+      setIsKnowledgeEntriesLoading(false);
+    }
+  }, [knowledgeEntries, hasCheckedKnowledgeEntries]);
 
   const selectedTool = TARGET_TOOLS.find((t) => t.value === targetTool);
 
   const handleGeneratePrompt = async () => {
     if (!query.trim()) {
       toast.error('Please enter a query or specification');
+      return;
+    }
+
+    // Check if we're still loading knowledge entries
+    if (isKnowledgeEntriesLoading) {
+      toast.error('Please wait while we load your knowledge base');
       return;
     }
 
@@ -177,23 +198,48 @@ export function PromptGenerator() {
           </SelectContent>
         </Select>
 
-        <Button
-          onClick={handleGeneratePrompt}
-          disabled={isGenerating}
-          className="w-full ai-secondary flex items-center justify-center"
-        >
-          {isGenerating ? (
-            <>
-              <Bot className="h-4 w-4 mr-2 animate-spin" />
-              Generating...
-            </>
-          ) : (
-            <>
-              <Sparkles className="h-4 w-4 mr-2" />
-              Generate Prompt
-            </>
-          )}
-        </Button>
+        {/* Knowledge entries status */}
+        {isKnowledgeEntriesLoading && (
+          <div className="flex items-center gap-2 p-3 rounded-lg bg-blue-500/5 border border-blue-500/20 text-blue-700 text-sm mt-2">
+            <Bot className="h-4 w-4 animate-spin" />
+            <span>Loading knowledge base...</span>
+          </div>
+        )}
+        
+        {!isKnowledgeEntriesLoading && knowledgeEntries.length === 0 && (
+          <div className="flex items-center gap-2 p-3 rounded-lg bg-indigo-500/5 border border-indigo-500/10 text-xs text-muted-foreground">
+            <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+            <span>
+              Add at least one knowledge entry above to start generating
+              personalized prompts.
+            </span>
+          </div>
+        )}
+
+        {(!isKnowledgeEntriesLoading && knowledgeEntries.length > 0) || isKnowledgeEntriesLoading ? (
+          <Button
+            onClick={handleGeneratePrompt}
+            disabled={isGenerating || isKnowledgeEntriesLoading}
+            className="w-full ai-secondary flex items-center justify-center"
+          >
+            {isGenerating ? (
+              <>
+                <Bot className="h-4 w-4 mr-2 animate-spin" />
+                Generating...
+              </>
+            ) : isKnowledgeEntriesLoading ? (
+              <>
+                <Bot className="h-4 w-4 mr-2 animate-spin" />
+                Loading...
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-4 w-4 mr-2" />
+                Generate Prompt
+              </>
+            )}
+          </Button>
+        ) : null}
 
         {error && (
           <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-700 dark:text-red-300 text-sm mt-2">
@@ -258,16 +304,6 @@ export function PromptGenerator() {
               </div>
             </div>
           )}
-        </div>
-      )}
-
-      {knowledgeEntries.length === 0 && (
-        <div className="flex items-start gap-2 p-3 rounded-lg bg-indigo-500/5 border border-indigo-500/10 text-xs text-muted-foreground">
-          <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
-          <span>
-            Add at least one knowledge entry above to start generating
-            personalized prompts.
-          </span>
         </div>
       )}
     </div>

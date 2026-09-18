@@ -25,7 +25,7 @@ const fadeIn = {
 };
 
 export default function Home() {
-  const { isLoading, error, refreshData } = useJarvis();
+  const { isLoadingKnowledgeEntries, isLoadingGeneratedPrompts, isLoadingTheme, refreshData } = useJarvis();
 
   return (
     <div className="min-h-screen relative overflow-x-hidden">
@@ -57,34 +57,6 @@ export default function Home() {
             </div>
           </div>
         </motion.header>
-
-        {/* Error State */}
-        {error && !isLoading && (
-          <motion.div
-            {...fadeIn}
-            transition={{ duration: 0.4 }}
-            className="glass-panel p-6 rounded-2xl border border-red-500/30 mb-6"
-          >
-            <div className="flex items-start gap-3">
-              <AlertCircle className="h-5 w-5 text-red-400 mt-0.5 shrink-0" />
-              <div className="flex-1 space-y-2">
-                <h3 className="font-semibold text-red-400">Connection Error</h3>
-                <p className="text-sm text-muted-foreground">
-                  {error}
-                </p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={refreshData}
-                  className="mt-2"
-                >
-                  <RefreshCw className="h-3.5 w-3.5 mr-1" />
-                  Retry Connection
-                </Button>
-              </div>
-            </div>
-          </motion.div>
-        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
           {/* Left Column - Hero */}
@@ -133,7 +105,7 @@ export default function Home() {
               transition={{ duration: 0.6, delay: 0.2 }}
             >
               <div className="glass-panel ai-primary p-6 rounded-2xl">
-                {isLoading ? <KnowledgeInputSkeleton /> : <KnowledgeInput />}
+                {isLoadingKnowledgeEntries ? <KnowledgeInputSkeleton /> : <KnowledgeInput />}
               </div>
             </motion.div>
 
@@ -142,7 +114,7 @@ export default function Home() {
               transition={{ duration: 0.6, delay: 0.3 }}
             >
               <div className="glass-panel ai-secondary p-6 rounded-2xl">
-                {isLoading ? <PromptGeneratorSkeleton /> : <PromptGenerator />}
+                <PromptGenerator />
               </div>
             </motion.div>
 
@@ -152,10 +124,10 @@ export default function Home() {
               className="grid grid-cols-1 md:grid-cols-2 gap-6"
             >
               <div className="glass-panel ai-accent p-6 rounded-2xl">
-                {isLoading ? <HistoryPanelSkeleton /> : <HistoryPanel />}
+                {isLoadingGeneratedPrompts ? <HistoryPanelSkeleton /> : <HistoryPanel />}
               </div>
               <div className="glass-panel ai-accent p-6 rounded-2xl">
-                {isLoading ? <SettingsPanelSkeleton /> : <SettingsPanel />}
+                {isLoadingTheme ? <SettingsPanelSkeleton /> : <SettingsPanel />}
               </div>
             </motion.div>
           </div>
@@ -167,15 +139,7 @@ export default function Home() {
           transition={{ duration: 0.6, delay: 0.5 }}
           className="mt-12 text-center text-xs text-muted-foreground flex items-center justify-center gap-2"
         >
-          {isLoading && (
-            <>
-              <Database className="h-3 w-3 animate-pulse" />
-              <span>Connecting to database...</span>
-            </>
-          )}
-          {!isLoading && !error && (
-            <p>Built with Next.js · v2.0 Personal Knowledge RAG</p>
-          )}
+          <p>Built with Next.js · v2.0 Personal Knowledge RAG</p>
         </motion.footer>
       </div>
     </div>
