@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useJarvis } from '@/lib/jarvis-provider';
 import { PromptGenerator } from './prompt-generator';
+import { Badge, Copy } from 'lucide-react';
 
 export function PromptGeneratorTab() {
   const { generatedPrompts } = useJarvis();
@@ -23,12 +24,12 @@ export function PromptGeneratorTab() {
       {/* Prompt History View (Paginated, 3 items per page) */}
       {generatedPrompts.length > 0 && (
         <div className="border-t pt-4 space-y-4">
-          <h2 className="text-xl font-semibold text-foreground/90">
-            Prompt History
-          </p>
-          <p className="text-sm text-muted-foreground">
-            Showing {paginatedPrompts.length} of {generatedPrompts.length} prompts
-          </p>
+                      <h2 className="text-xl font-semibold text-foreground/90">
+                        Prompt History
+                      </h2>
+                      <p className="text-sm text-muted-foreground">
+                        Showing {paginatedPrompts.length} of {generatedPrompts.length} prompts
+                      </p>
 
           {/* History Items */}
           <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
