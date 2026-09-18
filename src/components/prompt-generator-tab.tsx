@@ -1,9 +1,11 @@
 'use client';
 
+
 import { useState } from 'react';
 import { useJarvis } from '@/lib/jarvis-provider';
+import { Copy } from 'lucide-react'; 
+import { Badge } from '@/components/ui/badge'; 
 import { PromptGenerator } from './prompt-generator';
-import { Badge, Copy } from 'lucide-react';
 
 export function PromptGeneratorTab() {
   const { generatedPrompts } = useJarvis();
