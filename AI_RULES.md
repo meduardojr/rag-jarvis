@@ -70,4 +70,13 @@ To ensure consistency and leverage the chosen stack effectively, please follow t
     *   Write all new code in TypeScript.
     *   Strive for strong typing and leverage TypeScript's features to improve code quality and maintainability. Avoid using `any` where possible.
 
+## Code-Editing Discipline
+
+1. **Minimal changes only**: Never rewrite an entire file when a targeted edit (search-and-replace, adding a few lines) will do. Full-file rewrites are the last resort, not the default.
+2. **Read before writing**: Before editing any existing file, read its current actual content — do not assume or reconstruct what it contains from memory or a prior version of the conversation.
+3. **Scope containment**: Only modify files and sections directly relevant to the current request. Do not refactor, "clean up," or touch unrelated code, even if it looks improvable.
+4. **Database safety**: Never drop, rename, or alter existing tables/columns without explicit instruction. New columns must be nullable or have a default. Always show the exact SQL before running it.
+5. **State isolation**: Each component/section that fetches its own data must manage its own loading and error state independently. Do not introduce shared/global loading or error state that affects multiple unrelated sections.
+6. **Confirm before destructive actions**: Any action that deletes data, removes a file, or could break existing functionality requires explicit confirmation in the response before or as part of execution — clearly flag what could break.
+
 By following these guidelines, we can build a more robust, maintainable, and consistent application.
