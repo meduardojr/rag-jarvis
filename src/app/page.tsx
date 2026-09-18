@@ -9,7 +9,6 @@ import { HeroIllustration } from '@/components/ui/hero-illustration';
 import { KnowledgeInput } from '@/components/knowledge-input';
 import { SettingsPanel } from '@/components/settings-panel';
 import { AboutMeChat } from '@/components/about-me-chat';
-import { HistoryPanel } from '@/components/history-panel';
 import { PromptGeneratorTab } from '@/components/prompt-generator-tab';
 import { Button } from '@/components/ui/button';
 
@@ -110,14 +109,14 @@ export default function Home() {
           </div>
 
           {/* Tab Content */}
-                    <div className="space-y-6">
-                      <div hidden={activeTab !== 'about-me'}>
-                        <AboutMeChat />
-                      </div>
-                      <div hidden={activeTab !== 'prompt-generator'}>
-                        <PromptGeneratorTab />
-                      </div>
-                    </div>
+          <div className="space-y-6">
+            <div hidden={activeTab !== 'about-me'}>
+              <AboutMeChat />
+            </div>
+            <div hidden={activeTab !== 'prompt-generator'}>
+              <PromptGeneratorTab />
+            </div>
+          </div>
         </motion.div>
 
         {/* Settings Section */}
@@ -136,15 +135,6 @@ export default function Home() {
           className="mb-8 lg:mb-12"
         >
           <KnowledgeInput />
-        </motion.div>
-
-        {/* Full History Panel (below Knowledge Entry) */}
-        <motion.div
-          {...fadeIn}
-          transition={{ duration: 0.6, delay: 0.5 }}
-          className="mb-8 lg:mb-12"
-        >
-          <HistoryPanel />
         </motion.div>
 
         {/* Footer */}
