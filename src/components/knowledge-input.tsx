@@ -441,14 +441,14 @@ export function KnowledgeInput() {
                                   className="ml-1 h-4 w-4 rounded-full hover:bg-accent flex items-center justify-center"
                                 >
                                   <X className="h-3 w-3" />
-                                </button>
-                              </Badge>
-                            )}
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="flex items-center gap-3">
+                                                                  </button>
+                                                                </Badge>
+                                                              )}
+                                                            </div>
+                                                          }
+                                                        </div>
+                                  
+                                                        <div className="flex items-center gap-3">
                         <Button
                           variant="outline"
                           onClick={() => handleUpdateEntry(entry.id)}
