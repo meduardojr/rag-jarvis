@@ -544,26 +544,22 @@ export function KnowledgeInput() {
             {/* Pagination Controls */}
             <div className="flex items-center justify-between px-4 py-2 text-sm">
               <button
-                onClick={prevPage}
-                disabled={currentPage === 1}
-                className={`flex-1 px-3 py-1.5 rounded-md
-                  ${currentPage === 1 ? 'opacity-25' : ''}
-                  hover:opacity-100`}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-              <span className="text-center flex-1">
-                Page {currentPage} of {totalPages}
-              </span>
-              <button
-                onClick={nextPage}
-                disabled={currentPage === totalPages}
-                className={`flex-1 px-3 py-1.5 rounded-md
-                  ${currentPage === totalPages ? 'opacity-25' : ''}
-                  hover:opacity-100`}
-              >
-                <Next />
-              </button>
+                              onClick={prevPage}
+                              disabled={currentPage === 1}
+                              className={`flex-1 px-3 py-1.5 rounded-md ${currentPage === 1 ? 'opacity-25' : ''} hover:opacity-100`}
+                            >
+                              <ChevronLeft className="h-4 w-4" />
+                            </button>
+                            <span className="text-center flex-1">
+                              Page {currentPage} of {totalPages}
+                            </span>
+                            <button
+                              onClick={nextPage}
+                              disabled={currentPage === totalPages}
+                              className={`flex-1 px-3 py-1.5 rounded-md ${currentPage === totalPages ? 'opacity-25' : ''} hover:opacity-100`}
+                            >
+                              <ChevronRight className="h-4 w-4" />
+                            </button>
             </div>
           </>
         )}

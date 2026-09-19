@@ -79,4 +79,12 @@ To ensure consistency and leverage the chosen stack effectively, please follow t
 5. **State isolation**: Each component/section that fetches its own data must manage its own loading and error state independently. Do not introduce shared/global loading or error state that affects multiple unrelated sections.
 6. **Confirm before destructive actions**: Any action that deletes data, removes a file, or could break existing functionality requires explicit confirmation in the response before or as part of execution — clearly flag what could break.
 
+## Component Size & Readability
+
+1. **Extract sub-components, don't nest deeply.** If a component's JSX has more than ~3-4 levels of nested indentation, or the file is pushing past ~200-250 lines, break out logical chunks into their own sub-components (e.g. `KnowledgeEntryCard`, `TagList`, `ModelSelector`) rather than growing one file into an unreadable wall of tags and props.
+2. **No 500-line files as a default.** A single component file should not be allowed to grow to 500+ lines. If a feature naturally requires that much logic/markup, split it into a parent component plus multiple focused sub-components, each in its own file, composed together.
+3. **When splitting hurts performance, comment instead of skip.** If breaking something into a sub-component would meaningfully hurt loading/rendering performance (e.g. unnecessary re-renders, prop-drilling overhead, or genuinely tight coupling that can't be cleanly separated), it's acceptable to keep it as one file — but in that case, add a clear comment above each major section explaining what that section does, so the file is still scannable without needing sub-components. State explicitly in your response why you chose not to split it in this case.
+4. **Prefer flat, readable JSX over deep nesting.** Extract repeated or deeply nested markup into named sub-components even if they're small and only used once — clarity takes priority over minimizing file count.
+5. **Every new sub-component gets a one-line comment at the top** describing its purpose, so its role is obvious without reading its full implementation.
+
 By following these guidelines, we can build a more robust, maintainable, and consistent application.
