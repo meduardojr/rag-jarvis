@@ -268,7 +268,6 @@ export function KnowledgeInput() {
           <div className="space-y-2">
             <div className="flex gap-2">
               <Input
-                id="tag-input-add-form"
                 placeholder="Tags separated by commas (e.g., frontend, backend, database)"
                 value={tagInput}
                 onChange={(e) => setTagInput(e.target.value)}
@@ -279,7 +278,10 @@ export function KnowledgeInput() {
                 type="button"
                 variant="outline"
                 size="icon"
-                onClick={() => handleAddTag('add-form')}
+                onClick={() => {
+                  setTags(getPendingTags());
+                  setTagInput('');
+                }}
                 className="glass-panel-hover shrink-0"
               >
                 <Plus className="h-4 w-4" />
