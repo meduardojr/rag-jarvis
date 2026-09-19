@@ -443,7 +443,7 @@ export function KnowledgeInput() {
                                   <X className="h-3 w-3" />
                                                                   </button>
                                                                 </Badge>
-                                                              )}
+                                                              )
                                                             </div>
                                                           }
                                                         </div>
