@@ -10,6 +10,8 @@ import {
   X,
   FileText,
   Lock,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -400,11 +402,16 @@ export function KnowledgeInput() {
                             defaultValue={entry.category}
                             onValueChange={(v) => { /* We'll read the value directly on submit */ }}
                           >
-                            {CATEGORIES.map((cat) => (
-                              <SelectItem key={cat} value={cat}>
-                                {cat}
-                              </SelectItem>
-                            ))}
+                            <SelectTrigger className="glass-panel-hover">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="glass-panel">
+                              {CATEGORIES.map((cat) => (
+                                <SelectItem key={cat} value={cat}>
+                                  {cat}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
                           </Select>
                           
                           <div className="flex gap-2">
@@ -443,9 +450,9 @@ export function KnowledgeInput() {
                                   <X className="h-3 w-3" />
                                                                   </button>
                                                                 </Badge>
-                                                              )
+                                                              ))} 
                                                             </div>
-                                                          }
+                                                            )}
                                                         </div>
                                   
                                                         <div className="flex items-center gap-3">
@@ -522,16 +529,16 @@ export function KnowledgeInput() {
                   </p>
                   
                   {entry.tags && entry.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {entry.tags.map((tag: string) => (
-                        <Badge key={tag} variant="secondary" className="text-xs">
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
+                                                        <div className="flex flex-wrap gap-1 mt-2">
+                                                          {entry.tags.map((tag: string) => (
+                                                            <Badge key={tag} variant="secondary" className="text-xs">
+                                                              {tag}
+                                                            </Badge>
+                                                          ))}
+                                                        </div>
+                                                      )}
+                                                    </div>
+              )
             </div>
 
             {/* Pagination Controls */}
@@ -543,7 +550,7 @@ export function KnowledgeInput() {
                   ${currentPage === 1 ? 'opacity-25' : ''}
                   hover:opacity-100`}
               >
-                ‹ Previous
+                <ChevronLeft className="h-4 w-4" />
               </button>
               <span className="text-center flex-1">
                 Page {currentPage} of {totalPages}
@@ -555,7 +562,7 @@ export function KnowledgeInput() {
                   ${currentPage === totalPages ? 'opacity-25' : ''}
                   hover:opacity-100`}
               >
-                Next ›
+                <Next />
               </button>
             </div>
           </>
