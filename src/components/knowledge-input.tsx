@@ -538,7 +538,7 @@ export function KnowledgeInput() {
                                                         </div>
                                                       )}
                                                     </div>
-              )
+              ))} 
             </div>
 
             {/* Pagination Controls */}
