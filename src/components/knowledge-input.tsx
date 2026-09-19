@@ -58,6 +58,9 @@ export function KnowledgeInput() {
   const [isAdding, setIsAdding] = useState(false);
   // For inline editing, we'll store the editing state per entry
   const [editingEntries, setEditingEntries] = useState<Record<string, boolean>>({});
+  // Category is controlled via React state per entry, since the Select
+  // component doesn't render a native <select> with an id we can read from the DOM.
+  const [editingCategories, setEditingCategories] = useState<Record<string, string>>({});
 
   const getPendingTags = () => Array.from(new Set([
     ...tags,
@@ -103,18 +106,20 @@ export function KnowledgeInput() {
 
     const titleInput = document.getElementById(`title-${entryId}`) as HTMLInputElement;
     const contentInput = document.getElementById(`content-${entryId}`) as HTMLTextAreaElement;
-    const categoryInput = document.getElementById(`category-${entryId}`) as HTMLSelectElement;
     const tagInputEl = document.getElementById(`tag-input-${entryId}`) as HTMLInputElement;
     const tagsDisplay = document.getElementById(`tags-display-${entryId}`) as HTMLDivElement;
 
-    if (!titleInput || !contentInput || !categoryInput) {
+    if (!titleInput || !contentInput) {
       toast.error('Failed to access form elements');
       return;
     }
 
     const entryTitle = titleInput.value.trim();
     const entryContent = contentInput.value.trim();
-    const entryCategory = categoryInput.value;
+    const entryCategory =
+      editingCategories[entryId] ||
+      knowledgeEntries.find((e) => e.id === entryId)?.category ||
+      'Stack';
     const entryTags = Array.from(new Set([
       ...tags,
       ...tagInputEl.value.split(',').map((tag) => tag.trim()).filter(Boolean),
@@ -143,7 +148,12 @@ export function KnowledgeInput() {
         delete newState[entryId];
         return newState;
       });
-      
+      setEditingCategories(prev => {
+        const newState = {...prev};
+        delete newState[entryId];
+        return newState;
+      });
+
       toast.success('Knowledge entry updated successfully!');
     } catch (error: any) {
       console.error('Error updating knowledge entry:', error);
@@ -165,6 +175,11 @@ export function KnowledgeInput() {
         delete newState[id];
         return newState;
       });
+      setEditingCategories(prev => {
+        const newState = {...prev};
+        delete newState[id];
+        return newState;
+      });
       toast.success('Entry deleted');
     } catch (error: any) {
       console.error('Error deleting knowledge entry:', error);
@@ -181,6 +196,11 @@ export function KnowledgeInput() {
   };
 
   const handleEditEntry = (entryId: string) => {
+    const entry = knowledgeEntries.find((e) => e.id === entryId);
+    setEditingCategories(prev => ({
+      ...prev,
+      [entryId]: entry?.category || 'Stack',
+    }));
     setEditingEntries(prev => ({
       ...prev,
       [entryId]: true
@@ -189,6 +209,11 @@ export function KnowledgeInput() {
 
   const handleCancelEdit = (entryId: string) => {
     setEditingEntries(prev => {
+      const newState = {...prev};
+      delete newState[entryId];
+      return newState;
+    });
+    setEditingCategories(prev => {
       const newState = {...prev};
       delete newState[entryId];
       return newState;
@@ -386,24 +411,23 @@ export function KnowledgeInput() {
                       <Input
                         id={`title-${entry.id}`}
                         defaultValue={entry.title}
-                        onChange={(e) => { /* We'll read the value directly on submit */ }}
                         className="glass-panel-hover"
                       />
-                      
+
                       <Textarea
                         id={`content-${entry.id}`}
                         defaultValue={entry.content}
-                        onChange={(e) => { /* We'll read the value directly on submit */ }}
                         rows={3}
                         className="glass-panel-hover"
                       />
-                      
+
                       <div className="space-y-2">
                         <div className="flex gap-2">
                           <Select
-                            id={`category-${entry.id}`}
-                            defaultValue={entry.category}
-                            onValueChange={(v) => { /* We'll read the value directly on submit */ }}
+                            value={editingCategories[entry.id] ?? entry.category}
+                            onValueChange={(v) =>
+                              setEditingCategories(prev => ({ ...prev, [entry.id]: v }))
+                            }
                           >
                             <SelectTrigger className="glass-panel-hover">
                               <SelectValue />
@@ -416,7 +440,7 @@ export function KnowledgeInput() {
                               ))}
                             </SelectContent>
                           </Select>
-                          
+
                           <div className="flex gap-2">
                             <Input
                               id={`tag-input-${entry.id}`}
@@ -435,7 +459,7 @@ export function KnowledgeInput() {
                             </Button>
                           </div>
                         </div>
-                        
+
                         {entry.tags && entry.tags.length > 0 && (
                           <div id={`tags-display-${entry.id}`} className="flex flex-wrap gap-2 mt-2">
                             {entry.tags.map((tag) => (
@@ -451,14 +475,14 @@ export function KnowledgeInput() {
                                   className="ml-1 h-4 w-4 rounded-full hover:bg-accent flex items-center justify-center"
                                 >
                                   <X className="h-3 w-3" />
-                                                                  </button>
-                                                                </Badge>
-                                                              ))} 
-                                                            </div>
-                                                            )}
-                                                        </div>
-                                  
-                                                        <div className="flex items-center gap-3">
+                                </button>
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-3">
                         <Button
                           variant="outline"
                           onClick={() => handleUpdateEntry(entry.id)}
@@ -477,7 +501,7 @@ export function KnowledgeInput() {
                             </>
                           )}
                         </Button>
-                        
+
                         <Button
                           variant="outline"
                           onClick={() => handleCancelEdit(entry.id)}
@@ -525,44 +549,44 @@ export function KnowledgeInput() {
                       </div>
                     </div>
                   )}
-                  
+
                   <p className="text-sm text-muted-foreground line-clamp-2">
                     {entry.content.substring(0, 100)}
                     {entry.content.length > 100 ? '...' : ''}
                   </p>
-                  
+
                   {entry.tags && entry.tags.length > 0 && (
-                                                        <div className="flex flex-wrap gap-1 mt-2">
-                                                          {entry.tags.map((tag: string) => (
-                                                            <Badge key={tag} variant="secondary" className="text-xs">
-                                                              {tag}
-                                                            </Badge>
-                                                          ))}
-                                                        </div>
-                                                      )}
-                                                    </div>
-              ))} 
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {entry.tags.map((tag: string) => (
+                        <Badge key={tag} variant="secondary" className="text-xs">
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
 
             {/* Pagination Controls */}
             <div className="flex items-center justify-between px-4 py-2 text-sm">
               <button
-                              onClick={prevPage}
-                              disabled={currentPage === 1}
-                              className={`flex-1 px-3 py-1.5 rounded-md ${currentPage === 1 ? 'opacity-25' : ''} hover:opacity-100`}
-                            >
-                              <ChevronLeft className="h-4 w-4" />
-                            </button>
-                            <span className="text-center flex-1">
-                              Page {currentPage} of {totalPages}
-                            </span>
-                            <button
-                              onClick={nextPage}
-                              disabled={currentPage === totalPages}
-                              className={`flex-1 px-3 py-1.5 rounded-md ${currentPage === totalPages ? 'opacity-25' : ''} hover:opacity-100`}
-                            >
-                              <ChevronRight className="h-4 w-4" />
-                            </button>
+                onClick={prevPage}
+                disabled={currentPage === 1}
+                className={`flex-1 px-3 py-1.5 rounded-md ${currentPage === 1 ? 'opacity-25' : ''} hover:opacity-100`}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <span className="text-center flex-1">
+                Page {currentPage} of {totalPages}
+              </span>
+              <button
+                onClick={nextPage}
+                disabled={currentPage === totalPages}
+                className={`flex-1 px-3 py-1.5 rounded-md ${currentPage === totalPages ? 'opacity-25' : ''} hover:opacity-100`}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
             </div>
           </>
         )}
