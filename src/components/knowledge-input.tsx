@@ -462,7 +462,7 @@ export function KnowledgeInput() {
 
                         {entry.tags && entry.tags.length > 0 && (
                           <div id={`tags-display-${entry.id}`} className="flex flex-wrap gap-2 mt-2">
-                            {entry.tags.map((tag) => (
+                            {entry.tags.map((tag: string) => (
                               <Badge
                                 key={tag}
                                 variant="secondary"
