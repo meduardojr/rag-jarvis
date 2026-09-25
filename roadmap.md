@@ -30,12 +30,13 @@ This document outlines the planned, in-progress, and completed features for the 
 - ✅ Structured prompt output mode
 - ✅ Paid model options + password gate
 - ✅ Retrieved sources display
+- ✅ Pagination and search/filtering for knowledge entries list
+- ✅ Password‑gated knowledge base viewing with pagination, tabs, and placeholder data for unverified sessions
+- ✅ Improved error reporting for chunking/embedding failures
 
 ## In Progress
 - 🚧 UI indicators for chunking status (badge/showing "unchunked" entries)
 - 🚧 Retry mechanism for failed chunking from the UI
-- 🚧 Improved error reporting for chunking/embedding failures
-- 🚧 Pagination and search/filtering for knowledge entries list
 - 🚧 Tag management UI enhancements
 - 🚧 Root-cause fix for embedding pipeline failure
 - 🚧 Frontend: "Chunk Now" (single) + "Chunk All" (bulk) buttons wired to existing endpoints
@@ -44,7 +45,6 @@ This document outlines the planned, in-progress, and completed features for the 
 - 🚧 Export/import knowledge base
 - 🚧 Session expiry + rate limiting
 - 🚧 About Me Chat: constrained Q&A mode scoped to user's knowledge base with owner recognition, in-content redaction notes (REDACTION: convention), and full question logging
-- 🚧 Password‑gated knowledge base viewing with pagination, tabs, and placeholder data for unverified sessions
 
 ## Upcoming
 - 🔜 Version history for knowledge entries
