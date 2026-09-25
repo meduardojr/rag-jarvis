@@ -4,8 +4,9 @@
 This document outlines the planned, in-progress, and completed features for the Jarvis knowledge base application.
 
 ## Legend
-- ✅ Completed
+- ✅ Completed (verified working by me)
 - 🚧 In Progress
+- ⚠️ Needs re-verification (status unconfirmed after recent git reset)
 - 🔜 Upcoming
 
 ## Completed
@@ -32,19 +33,30 @@ This document outlines the planned, in-progress, and completed features for the 
 - ✅ Retrieved sources display
 - ✅ Pagination and search/filtering for knowledge entries list
 - ✅ Password‑gated knowledge base viewing with pagination, tabs, and placeholder data for unverified sessions
-- ✅ Improved error reporting for chunking/embedding failures
+- ✅ Root cause of embedding pipeline failure identified: missing/inactive RAG API key
+- ✅ Localized loading/error states — each section manages its own loading/error independently (no shared state across sections)
+- ✅ Merged hero + "AI-powered prompt assistant" intro section, with tabbed interface (About Me Chat / Generate AI Prompt) below it
 
 ## In Progress
 - 🚧 UI indicators for chunking status (badge/showing "unchunked" entries)
 - 🚧 Retry mechanism for failed chunking from the UI
 - 🚧 Tag management UI enhancements
-- 🚧 Root-cause fix for embedding pipeline failure
 - 🚧 Frontend: "Chunk Now" (single) + "Chunk All" (bulk) buttons wired to existing endpoints
 - 🚧 History view with model tracking
 - 🚧 File upload ingestion (.md/.pdf)
 - 🚧 Export/import knowledge base
 - 🚧 Session expiry + rate limiting
+- 🚧 Improved error reporting for chunking/embedding failures
 - 🚧 About Me Chat: constrained Q&A mode scoped to user's knowledge base with owner recognition, in-content redaction notes (REDACTION: convention), and full question logging
+- 🚧 Inline knowledge entry editing (edit directly in the list, not via the add-entry form)
+- 🚧 Agent + model selection for Generate AI Prompt (pick agent first, then a model valid for that agent)
+- 🚧 Desktop layout fixes (side-by-side hero/intro, square aspect ratio, tag contrast, general max-width/grid cleanup)
+- 🚧 Jev-based scope classification for About Me Chat (planned: schema/payload doc → guardrail swap → shadow-mode validation, not yet started)
+
+## Needs re-verification
+⚠️ The items below were worked on but a subsequent AI-assisted change broke functionality, requiring a `git reset --hard` to the last pushed commit. Their current real status is unknown until manually re-checked in the running app:
+- Tab switching between "Add Entry" and "Knowledge Base" views in the Knowledge Entry section
+- Password-triggered automatic unmasking of the knowledge base list
 
 ## Upcoming
 - 🔜 Version history for knowledge entries
@@ -59,4 +71,5 @@ This document outlines the planned, in-progress, and completed features for the 
 
 ## Notes
 - This roadmap is updated whenever there is a significant change related to planned features.
+- Items are only marked ✅ after manual verification in the running app — not on an AI assistant's self-report of success.
 - For detailed implementation notes, see the commit messages and PR descriptions.
