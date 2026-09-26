@@ -225,83 +225,85 @@ export function KnowledgeBaseList({
                   </div>
                 ) : (
                   // Display mode
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-medium text-indigo-600 dark:text-indigo-300 truncate">
-                        {entry.title}
-                      </h4>
-                      <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-muted-foreground">
-                        <Badge variant="outline" className="text-xs">
-                          {entry.category}
-                        </Badge>
-                        <span>
-                          {entry.created_at ? new Date(entry.created_at).toLocaleDateString() : 'N/A'}
-                        </span>
+                  <>
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-medium text-indigo-600 dark:text-indigo-300 truncate">
+                          {entry.title}
+                        </h4>
+                        <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-muted-foreground">
+                          <Badge variant="outline" className="text-xs">
+                            {entry.category}
+                          </Badge>
+                          <span>
+                            {entry.created_at ? new Date(entry.created_at).toLocaleDateString() : 'N/A'}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex gap-1 ml-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEditEntry(entry.id)}
+                          disabled={!isPasswordVerified}
+                          className="h-8 w-8"
+                        >
+                          <Edit className="h-4 w-4 text-indigo-500 hover:text-indigo-600" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteEntry(entry.id)}
+                          disabled={!isPasswordVerified}
+                          className="h-8 w-8"
+                        >
+                          <Trash2 className="h-4 w-4 text-indigo-500 hover:text-indigo-600" />
+                        </Button>
                       </div>
                     </div>
-                    <div className="flex gap-1 ml-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleEditEntry(entry.id)}
-                        disabled={!isPasswordVerified}
-                        className="h-8 w-8"
-                      >
-                        <Edit className="h-4 w-4 text-indigo-500 hover:text-indigo-600" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDeleteEntry(entry.id)}
-                        disabled={!isPasswordVerified}
-                        className="h-8 w-8"
-                      >
-                        <Trash2 className="h-4 w-4 text-indigo-500 hover:text-indigo-600" />
-                      </Button>
-                    </div>
-                  </div>
 
-                  <p className="text-sm text-muted-foreground line-clamp-2">
-                    {entry.content.substring(0, 100)}
-                    {entry.content.length > 100 ? '...' : ''}
-                  </p>
+                    <p className="text-sm text-muted-foreground line-clamp-2">
+                      {entry.content.substring(0, 100)}
+                      {entry.content.length > 100 ? '...' : ''}
+                    </p>
 
-                  {entry.tags && entry.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {entry.tags.map((tag: string) => (
-                        <Badge key={tag} variant="secondary" className="text-xs">
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
+                    {entry.tags && entry.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {entry.tags.map((tag: string) => (
+                          <Badge key={tag} variant="secondary" className="text-xs">
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
 
-            {/* Pagination Controls */}
-            <div className="flex items-center justify-between px-4 py-2 text-sm">
-              <button
-                onClick={prevPage}
-                disabled={currentPage === 1}
-                className={`flex-1 px-3 py-1.5 rounded-md ${currentPage === 1 ? 'opacity-25' : ''} hover:opacity-100`}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-              <span className="text-center flex-1">
-                Page {currentPage} of {totalPages}
-              </span>
-              <button
-                onClick={nextPage}
-                disabled={currentPage === totalPages}
-                className={`flex-1 px-3 py-1.5 rounded-md ${currentPage === totalPages ? 'opacity-25' : ''} hover:opacity-100`}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            </div>
-          </>
-        )
-      }
+          {/* Pagination Controls */}
+          <div className="flex items-center justify-between px-4 py-2 text-sm">
+            <button
+              onClick={prevPage}
+              disabled={currentPage === 1}
+              className={`flex-1 px-3 py-1.5 rounded-md ${currentPage === 1 ? 'opacity-25' : ''} hover:opacity-100`}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <span className="text-center flex-1">
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              onClick={nextPage}
+              disabled={currentPage === totalPages}
+              className={`flex-1 px-3 py-1.5 rounded-md ${currentPage === totalPages ? 'opacity-25' : ''} hover:opacity-100`}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }
