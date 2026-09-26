@@ -13,15 +13,22 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { AgentSelector } from '@/components/agent-selector';
+import { ModelSelector } from '@/components/model-selector';
 import { useJarvis } from '@/lib/jarvis-provider';
 
+// Define the models (duplicated from settings-panel for now, but we can consider moving to a shared lib later)
+const MODELS = [
+  { id: 'gemini-flash', name: 'Gemini Flash', tier: 'free' },
+  { id: 'groq-llama3', name: 'Groq Llama3 70B', tier: 'free' },
+  { id: 'groq-mixtral', name: 'Groq Mixtral 8x7B', tier: 'free' },
+  { id: 'claude-3-5-sonnet', name: 'Claude 3.5 Sonnet', tier: 'paid' },
+  { id: 'gpt-4o', name: 'GPT-4o', tier: 'paid' },
+  { id: 'deepseek-chat', name: 'DeepSeek Chat', tier: 'paid' },
+  { id: 'qwen-flash', name: 'Qwen Flash', tier: 'paid' },
+] as const;
+
+// Define the target tools (agents) - duplicated from the existing TARGET_TOOLS in this file
 const TARGET_TOOLS = [
   { value: 'claude', label: 'Claude (Anthropic)' },
   { value: 'bolt', label: 'Bolt.new' },
@@ -33,6 +40,21 @@ const TARGET_TOOLS = [
 
 type TargetToolValue = (typeof TARGET_TOOLS)[number]['value'];
 
+// Define the agent -> model mapping
+// Base this on the existing models and the agents.
+// For the Claude agent, we only allow the Claude model (since it's specific to Claude).
+// For all other agents, we allow all models.
+const freeModels = MODELS.filter((m) => m.tier === 'free').map((m) => m.id);
+const paidModels = MODELS.filter((m) => m.tier === 'paid').map((m) => m.id);
+const AGENT_MODEL_MAP: Record<TargetToolValue, string[]> = {
+  claude: ['claude-3-5-sonnet'], // only the Claude model for Claude agent
+  bolt: [...freeModels, ...paidModels], // all models for Bolt
+  cursor: [...freeModels, ...paidModels], // all models for Cursor
+  v0: [...freeModels, ...paidModels], // all models for v0
+  copilot: [...freeModels, ...paidModels], // all models for Copilot
+  general: [...freeModels, ...paidModels], // all models for General
+};
+
 export function PromptGenerator() {
   const { 
     isPasswordVerified, 
@@ -41,7 +63,8 @@ export function PromptGenerator() {
     knowledgeEntries 
   } = useJarvis();
   const [query, setQuery] = useState('');
-  const [targetTool, setTargetTool] = useState<TargetToolValue>('claude');
+  const [agent, setAgent] = useState<TargetToolValue>('claude'); // default agent
+  const [modelId, setModelId] = useState<string>('gemini-flash'); // default model
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedPrompt, setGeneratedPrompt] = useState('');
   const [retrievedChunks, setRetrievedChunks] = useState<
@@ -64,7 +87,9 @@ export function PromptGenerator() {
     }
   }, [knowledgeEntries, hasCheckedKnowledgeEntries]);
 
-  const selectedTool = TARGET_TOOLS.find((t) => t.value === targetTool);
+  const selectedAgent = TARGET_TOOLS.find((t) => t.value === agent);
+  const selectedModel = MODELS.find((m) => m.id === modelId);
+  const isPaid = selectedModel?.tier === 'paid';
 
   const handleGeneratePrompt = async () => {
     if (!query.trim()) {
@@ -84,8 +109,6 @@ export function PromptGenerator() {
     }
 
     // Check if the model is paid and require password verification
-    const paidTools = ['claude', 'copilot'];
-    const isPaid = paidTools.includes(targetTool);
     if (isPaid && !isPasswordVerified) {
       toast.error('Password required for paid model. Please verify your password in the settings.');
       return;
@@ -102,8 +125,8 @@ export function PromptGenerator() {
         },
         body: JSON.stringify({
           query,
-          target_tool: targetTool,
-          model: 'gemini-2.0-flash', // Default to free model
+          target_tool: agent, // use the selected agent
+          model: modelId, // use the selected model
         }),
       });
 
@@ -135,7 +158,7 @@ export function PromptGenerator() {
       addGeneratedPrompt({
         id: Date.now(),
         query,
-        targetTool: selectedTool?.label || targetTool,
+        targetTool: selectedAgent?.label || agent,
         modelUsed: result.model_used,
         modelTier: result.model_tier,
         generatedOutput: result.generated_prompt,
@@ -180,23 +203,25 @@ export function PromptGenerator() {
           className="glass-panel-hover"
         />
 
-        <Select
-          value={targetTool}
-          onValueChange={(v) => setTargetTool(v as TargetToolValue)}
-        >
-          <SelectTrigger className="w-full glass-panel-hover">
-            <SelectValue placeholder="Select target AI tool" />
-          </SelectTrigger>
-          <SelectContent className="w-full glass-panel">
-            {TARGET_TOOLS.map((tool) => (
-              <SelectItem key={tool.value} value={tool.value}>
-                <div className="flex items-center gap-2">
-                  <span>{tool.label}</span>
-                </div>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {/* Agent and Model Selection */}
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <AgentSelector
+              value={agent}
+              onValueChange={setAgent}
+              options={TARGET_TOOLS}
+            />
+          </div>
+          <div className="space-y-2">
+            <ModelSelector
+              agent={agent}
+              value={modelId}
+              onValueChange={setModelId}
+              models={MODELS}
+              agentModelMap={AGENT_MODEL_MAP}
+            />
+          </div>
+        </div>
 
         {/* Knowledge entries status */}
         {isKnowledgeEntriesLoading && (
