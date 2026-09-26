@@ -18,7 +18,7 @@ import { ModelSelector } from '@/components/model-selector';
 import { useJarvis } from '@/lib/jarvis-provider';
 
 // Define the models (duplicated from settings-panel for now, but we can consider moving to a shared lib later)
-const MODELS = [
+const MODELS_CONST = [
   { id: 'gemini-flash', name: 'Gemini Flash', tier: 'free' },
   { id: 'groq-llama3', name: 'Groq Llama3 70B', tier: 'free' },
   { id: 'groq-mixtral', name: 'Groq Mixtral 8x7B', tier: 'free' },
@@ -29,7 +29,7 @@ const MODELS = [
 ] as const;
 
 // Define the target tools (agents) - duplicated from the existing TARGET_TOOLS in this file
-const TARGET_TOOLS = [
+const TARGET_TOOLS_CONST = [
   { value: 'claude', label: 'Claude (Anthropic)' },
   { value: 'bolt', label: 'Bolt.new' },
   { value: 'cursor', label: 'Cursor' },
@@ -38,14 +38,17 @@ const TARGET_TOOLS = [
   { value: 'general', label: 'General AI' },
 ] as const;
 
-type TargetToolValue = (typeof TARGET_TOOLS)[number]['value'];
+type TargetToolValue = typeof TARGET_TOOLS_CONST[number]['value'];
+
+const TARGET_TOOLS = TARGET_TOOLS_CONST.map(t => ({ value: t.value, label: t.label }));
+const MODELS = MODELS_CONST.map(m => ({ id: m.id, name: m.name, tier: m.tier }));
 
 // Define the agent -> model mapping
 // Base this on the existing models and the agents.
 // For the Claude agent, we only allow the Claude model (since it's specific to Claude).
 // For all other agents, we allow all models.
-const freeModels = MODELS.filter((m) => m.tier === 'free').map((m) => m.id);
-const paidModels = MODELS.filter((m) => m.tier === 'paid').map((m) => m.id);
+const freeModels = MODELS_CONST.filter((m) => m.tier === 'free').map((m) => m.id);
+const paidModels = MODELS_CONST.filter((m) => m.tier === 'paid').map((m) => m.id);
 const AGENT_MODEL_MAP: Record<TargetToolValue, string[]> = {
   claude: ['claude-3-5-sonnet'], // only the Claude model for Claude agent
   bolt: [...freeModels, ...paidModels], // all models for Bolt
@@ -87,8 +90,8 @@ export function PromptGenerator() {
     }
   }, [knowledgeEntries, hasCheckedKnowledgeEntries]);
 
-  const selectedAgent = TARGET_TOOLS.find((t) => t.value === agent);
-  const selectedModel = MODELS.find((m) => m.id === modelId);
+  const selectedAgent = TARGET_TOOLS_CONST.find((t) => t.value === agent);
+  const selectedModel = MODELS_CONST.find((m) => m.id === modelId);
   const isPaid = selectedModel?.tier === 'paid';
 
   const handleGeneratePrompt = async () => {
@@ -208,7 +211,7 @@ export function PromptGenerator() {
           <div className="space-y-2">
             <AgentSelector
               value={agent}
-              onValueChange={setAgent}
+              onValueChange={(value) => setAgent(value as TargetToolValue)}
               options={TARGET_TOOLS}
             />
           </div>
