@@ -31,7 +31,7 @@ export function ModelSelector({
     <Select
       value={value}
       onValueChange={onValueChange}
-      disabled(!agent || filteredModels.length === 0)
+      disabled={!agent || filteredModels.length === 0}
     >
       <SelectTrigger className="w-full glass-panel-hover">
         <SelectValue placeholder="Select model" />
