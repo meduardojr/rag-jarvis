@@ -38,6 +38,31 @@ async function callOpenAI(model: string, systemPrompt: string, userPrompt: strin
   return data.choices?.[0]?.message?.content || 'Failed to generate response';
 }
 
+// Process a chunk's text for visitor mode: extract redaction instructions and return cleaned text
+function processChunkForVisitor(chunkText: string): { cleanedText: string, redactionInstructions: string[] } {
+  const lines = chunkText.split('\n');
+  const cleanedLines: string[] = [];
+  const instructions: string[] = [];
+
+  for (const line of lines) {
+    const trimmedLine = line.trim();
+    if (trimmedLine.startsWith('REDACTION:')) {
+      const instruction = trimmedLine.substring('REDACTION:'.length).trim();
+      if (instruction) {
+        instructions.push(instruction);
+      }
+      // Do not add this line to cleanedLines
+    } else {
+      cleanedLines.push(line);
+    }
+  }
+
+  return {
+    cleanedText: cleanedLines.join('\n'),
+    redactionInstructions: instructions,
+  };
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { question } = await request.json();
@@ -48,6 +73,10 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Check if the session is verified (owner) using the same cookie mechanism as elsewhere
+    const SESSION_COOKIE = 'jarvis-session';
+    const isOwner = request.cookies.get(SESSION_COOKIE)?.value === 'verified';
 
     // Step 1: Classify the question
     let isInScope = false;
@@ -68,13 +97,14 @@ export async function POST(request: NextRequest) {
     if (!isInScope) {
       // Log the out-of-scope question
       await sql`
-        INSERT INTO public.about_me_chat_log (question, in_scope, answer)
-        VALUES (${question}, ${false}, ${OUT_OF_SCOPE_MESSAGE})
+        INSERT INTO public.about_me_chat_log (question, in_scope, answer, is_owner)
+        VALUES (${question}, ${false}, ${OUT_OF_SCOPE_MESSAGE}, ${isOwner})
       `;
 
       return NextResponse.json({
         answer: OUT_OF_SCOPE_MESSAGE,
         in_scope: false,
+        is_owner: isOwner,
       });
     }
 
@@ -123,16 +153,47 @@ export async function POST(request: NextRequest) {
       // No relevant chunks found
       answer = "I don't have enough information in your knowledge base to answer this question. Consider adding relevant notes about this topic to improve future responses.";
     } else {
-      // Build context from retrieved chunks
-      const context = relevantChunks.map((chunk: any) => 
-        `[From: ${chunk.title}]\n${chunk.chunk_text}`
+      // Process chunks based on owner/visitor status
+      const processedChunks: { cleanedText: string, title: string }[] = [];
+      const allRedactionInstructions: string[] = [];
+
+      for (const chunk of relevantChunks) {
+        if (isOwner) {
+          // Owner: use the full chunk text, ignore redaction
+          processedChunks.push({
+            cleanedText: chunk.chunk_text,
+            title: chunk.title,
+          });
+        } else {
+          // Visitor: extract redaction instructions and clean the text
+          const processed = processChunkForVisitor(chunk.chunk_text);
+          processedChunks.push({
+            cleanedText: processed.cleanedText,
+            title: chunk.title,
+          });
+          allRedactionInstructions.push(...processed.redactionInstructions);
+        }
+      }
+
+      // Build context from processed chunks
+      const context = processedChunks.map((chunk) => 
+        `[From: ${chunk.title}]\n${chunk.cleanedText}`
       ).join('\n\n---\n\n');
+
+      // Prepare the system prompt for answer generation
+      let baseSystemPrompt = "You are a helpful assistant that answers questions based on the provided context from the user's knowledge base. Answer the question based only on the context provided. If the context does not contain enough information to answer the question, say that you don't have enough information.";
+      if (!isOwner && allRedactionInstructions.length > 0) {
+        // For visitor mode with redaction instructions, add them to the system prompt
+        const uniqueInstructions = [...new Set(allRedactionInstructions)]; // deduplicate
+        const redactionPrompt = `You must follow these redaction instructions: ${uniqueInstructions.join('; ')}.`;
+        baseSystemPrompt = `${baseSystemPrompt} ${redactionPrompt}`;
+      }
 
       // Generate answer using the LLM
       try {
         answer = await callOpenAI(
           GENERATION_MODEL,
-          "You are a helpful assistant that answers questions based on the provided context from the user's knowledge base. Answer the question based only on the context provided. If the context does not contain enough information to answer the question, say that you don't have enough information.",
+          baseSystemPrompt,
           `Context:\n${context}\n\nQuestion: ${question}`
         );
       } catch (generationError) {
@@ -143,13 +204,14 @@ export async function POST(request: NextRequest) {
 
     // Log the question and answer
     await sql`
-      INSERT INTO public.about_me_chat_log (question, in_scope, answer)
-      VALUES (${question}, ${true}, ${answer})
+      INSERT INTO public.about_me_chat_log (question, in_scope, answer, is_owner)
+      VALUES (${question}, ${true}, ${answer}, ${isOwner})
     `;
 
     return NextResponse.json({
       answer,
       in_scope: true,
+      is_owner: isOwner,
     });
   } catch (error) {
     console.error('Error in about-me-chat:', error);
