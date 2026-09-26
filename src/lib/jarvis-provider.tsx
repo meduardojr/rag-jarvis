@@ -84,6 +84,11 @@ export function JarvisProvider({ children }: { children: ReactNode }) {
       .catch(() => setPasswordVerified(false));
   }, []);
 
+  // Refetch knowledge entries when password verification status changes
+  useEffect(() => {
+    loadKnowledgeEntries();
+  }, [isPasswordVerified]);
+
   const loadKnowledgeEntries = async () => {
     return await fetchKnowledgeEntries(currentPage, pageSize);
   };
