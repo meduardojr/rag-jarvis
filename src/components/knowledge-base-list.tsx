@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   Plus,
   Trash2,
@@ -81,10 +81,6 @@ export function KnowledgeBaseList({
   handleTagInputKeyDown,
   getPendingTags,
 }: KnowledgeBaseListProps) {
-  useEffect(() => {
-    console.log('KnowledgeBaseList rendered, isPasswordVerified:', isPasswordVerified);
-  }, [isPasswordVerified]);
-
   const totalPages = Math.max(Math.ceil(totalEntries / pageSize), 1);
 
   return (
@@ -277,7 +273,7 @@ export function KnowledgeBaseList({
                           <Badge key={tag} variant="secondary" className="text-xs">
                             {isPasswordVerified ? tag : '•••••••'}
                           </Badge>
-                        ))
+                        ))}
                       </div>
                     )}
                   </>
