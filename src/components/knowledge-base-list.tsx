@@ -20,7 +20,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge>;
+import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -28,9 +28,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ChunkStatusBadge } from '@/components/chunk-status-badge>;
-import { ChunkNowButton } from '@/components/chunk-now-button>;
-import { useJarvis } from '@/lib/jarvis-provider>;
+import { ChunkStatusBadge } from '@/components/chunk-status-badge';
+import { ChunkNowButton } from '@/components/chunk-now-button';
+import { useJarvis } from '@/lib/jarvis-provider';
 
 const CATEGORIES = [
   'Stack',
@@ -138,7 +138,7 @@ export function KnowledgeBaseList({
           <p className="text-muted-foreground">
             No knowledge entries yet. Add some entries to get started.
           </p>
-        }
+        </div>
       ) : (
         <>
           {/* Chunk All Button (only show if there are unchunked entries) */}
@@ -265,7 +265,7 @@ export function KnowledgeBaseList({
                       >
                         {isAdding ? (
                           <>
-                            <Check className="h-4 w-4 mr-2 animate-spin" />
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                             Updating...
                           </>
                         ) : (
@@ -311,7 +311,7 @@ export function KnowledgeBaseList({
                           className="h-8 w-8"
                         >
                           <Edit className="h-4 w-4 text-indigo-500 hover:text-indigo-600" />
-                        </Button
+                        </Button>
                         <Button
                           variant="ghost"
                           size="icon"
@@ -330,17 +330,17 @@ export function KnowledgeBaseList({
                     </p>
 
                     {entry.tags && entry.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-2>
+                      <div className="flex flex-wrap gap-1 mt-2">
                         {entry.tags.map((tag: string) => (
                           <Badge key={tag} variant="secondary" className="text-xs">
                             {isPasswordVerified ? tag : '•••••••'}
                           </Badge>
-                        ))
-                      }
+                        ))}
+                      </div>
                     )}
 
                     {/* Chunking Status and Chunk Now Button */}
-                    <div className="flex items-center gap-2 mt-2>
+                    <div className="flex items-center gap-2 mt-2">
                       <ChunkStatusBadge chunked={entry.chunked} />
                       {!entry.chunked && isPasswordVerified && !isAdding && (
                         <ChunkNowButton
@@ -363,7 +363,7 @@ export function KnowledgeBaseList({
               className={`flex-1 px-3 py-1.5 rounded-md ${currentPage === 1 ? 'opacity-25' : ''} hover:opacity-100`}
             >
               <ChevronLeft className="h-4 w-4" />
-            </button
+            </button>
             <span className="text-center flex-1">
               Page {currentPage} of {totalPages}
             </span>
