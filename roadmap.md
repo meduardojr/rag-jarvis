@@ -37,6 +37,7 @@ This document outlines the planned, in-progress, and completed features for the 
 - ✅ Localized loading/error states — each section manages its own loading/error independently (no shared state across sections)
 - ✅ Merged hero + "AI-powered prompt assistant" intro section, with tabbed interface (About Me Chat / Generate AI Prompt) below it
 - ✅ Inline knowledge entry editing (edit directly in the list, not via the add-entry form)
+- ✅ Agent + model selection for Generate AI Prompt (pick agent first, then a model valid for that agent)
 
 
 ## In Progress
@@ -50,7 +51,6 @@ This document outlines the planned, in-progress, and completed features for the 
 - 🚧 Session expiry + rate limiting
 - 🚧 Improved error reporting for chunking/embedding failures
 - 🚧 About Me Chat: constrained Q&A mode scoped to user's knowledge base with owner recognition, in-content redaction notes (REDACTION: convention), and full question logging
-- 🚧 Agent + model selection for Generate AI Prompt (pick agent first, then a model valid for that agent)
 - 🚧 Desktop layout fixes (side-by-side hero/intro, square aspect ratio, tag contrast, general max-width/grid cleanup)
 - 🚧 Jev-based scope classification for About Me Chat (planned: schema/payload doc → guardrail swap → shadow-mode validation, not yet started)
 

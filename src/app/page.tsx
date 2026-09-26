@@ -57,29 +57,37 @@ export default function Home() {
           transition={{ duration: 0.6, delay: 0.1 }}
           className="mb-8 lg:mb-12"
         >
-          <HeroIllustration className="w-full" />
-          <div className="glass-panel ai-primary p-6 rounded-2xl">
-            <h2 className="text-lg font-semibold mb-2">
-              Your AI-Powered Prompt Assistant
-            </h2>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              Build your personal knowledge base, then generate tailored AI
-              prompts grounded in your real preferences and conventions —
-              ready to paste into Claude, Bolt, Cursor, v0, and more.
-            </p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <span className="text-xs px-2 py-1 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                🔍 RAG-powered
-              </span>
-              <span className="text-xs px-2 py-1 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                🎯 Tool-specific
-              </span>
-              <span className="text-xs px-2 py-1 rounded-full bg-pink-500/20 text-pink-300 border border-pink-500/30">
-                🔐 Password-gated
-              </span>
-              <span className="text-xs px-2 py-1 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                💾 Self-hosted data
-              </span>
+          <div className="mx-auto max-w-6xl">
+            <div className="flex flex-col lg:flex-row gap-8">
+              <div className="flex-shrink-0 lg:w-[300px]">
+                <HeroIllustration className="h-96 w-full lg:h-[300px] lg:w-full lg:aspect-[1/1]" />
+              </div>
+              <div className="flex-1 lg:w-1/2">
+                <div className="glass-panel ai-primary p-6 rounded-2xl">
+                  <h2 className="text-lg font-semibold mb-2">
+                    Your AI-Powered Prompt Assistant
+                  </h2>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    Build your personal knowledge base, then generate tailored AI
+                    prompts grounded in your real preferences and conventions —
+                    ready to paste into Claude, Bolt, Cursor, v0, and more.
+                  </p>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <span className="text-xs px-2 py-1 rounded-full bg-indigo-500/20 text-indigo-600 border border-indigo-500/30">
+                      🔍 RAG-powered
+                    </span>
+                    <span className="text-xs px-2 py-1 rounded-full bg-purple-500/20 text-purple-600 border border-purple-500/30">
+                      🎯 Tool-specific
+                    </span>
+                    <span className="text-xs px-2 py-1 rounded-full bg-pink-500/20 text-pink-600 border border-pink-500/30">
+                      🔐 Password-gated
+                    </span>
+                    <span className="text-xs px-2 py-1 rounded-full bg-indigo-500/20 text-indigo-600 border border-indigo-500/30">
+                      💾 Self-hosted data
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </motion.div>
@@ -109,12 +117,14 @@ export default function Home() {
           </div>
 
           {/* Tab Content */}
-          <div className="space-y-6">
-            <div hidden={activeTab !== 'about-me'}>
-              <AboutMeChat />
-            </div>
-            <div hidden={activeTab !== 'prompt-generator'}>
-              <PromptGeneratorTab />
+          <div className="mx-auto max-w-6xl">
+            <div className="space-y-6">
+              <div hidden={activeTab !== 'about-me'}>
+                <AboutMeChat />
+              </div>
+              <div hidden={activeTab !== 'prompt-generator'}>
+                <PromptGeneratorTab />
+              </div>
             </div>
           </div>
         </motion.div>
@@ -125,7 +135,9 @@ export default function Home() {
           transition={{ duration: 0.6, delay: 0.3 }}
           className="mb-8 lg:mb-12"
         >
-          <SettingsPanel />
+          <div className="mx-auto max-w-6xl">
+            <SettingsPanel />
+          </div>
         </motion.div>
 
         {/* Knowledge Entry Section */}
@@ -134,7 +146,9 @@ export default function Home() {
           transition={{ duration: 0.6, delay: 0.4 }}
           className="mb-8 lg:mb-12"
         >
-          <KnowledgeInput />
+          <div className="mx-auto max-w-6xl">
+            <KnowledgeInput />
+          </div>
         </motion.div>
 
         {/* Footer */}
