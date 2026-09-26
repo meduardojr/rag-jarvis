@@ -26,7 +26,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useJarvis } from '@/lib/jarvis-provider';
+import { AddEntryForm } from '@/components/add-entry-form';
+import { KnowledgeBaseList } from '@/components/knowledge-base-list';
 
 const CATEGORIES = [
   'Stack',
@@ -61,6 +64,7 @@ export function KnowledgeInput() {
   // Category is controlled via React state per entry, since the Select
   // component doesn't render a native <select> with an id we can read from the DOM.
   const [editingCategories, setEditingCategories] = useState<Record<string, string>>({});
+  const [activeTab, setActiveTab] = useState<'add' | 'list'>('add');
 
   const getPendingTags = () => Array.from(new Set([
     ...tags,
@@ -243,354 +247,65 @@ export function KnowledgeInput() {
   const totalPages = Math.max(Math.ceil(totalEntries / pageSize), 1);
 
   return (
-    <div className="space-y-6">
-      {/* Add Entry Form (always visible) */}
-      <div className="space-y-4">
-        <div className="space-y-3">
-          <h2 className="text-xl font-semibold text-foreground/90">
-            Add Knowledge Entry
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            Capture your technical knowledge, preferences, and conventions
-          </p>
-          {!isPasswordVerified && (
-            <div className="flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
-              <Lock className="h-3.5 w-3.5 shrink-0" />
-              Verify your password in Settings to add or modify entries.
-            </div>
-          )}
-        </div>
-
-        <div className="space-y-4">
-          <Input
-            placeholder="Entry title (e.g., 'Backend Stack', 'React Architecture')"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="glass-panel-hover"
-          />
-
-          <Textarea
-            placeholder="Describe your knowledge, preferences, conventions, etc."
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            rows={4}
-            className="glass-panel-hover"
-          />
-
-          <Select value={category} onValueChange={setCategory}>
-            <SelectTrigger className="w-full glass-panel-hover">
-              <SelectValue placeholder="Select category" />
-            </SelectTrigger>
-            <SelectContent className="w-full glass-panel">
-              {CATEGORIES.map((cat) => (
-                <SelectItem key={cat} value={cat}>
-                  {cat}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <div className="space-y-2">
-            <div className="flex gap-2">
-              <Input
-                placeholder="Tags separated by commas (e.g., frontend, backend, database)"
-                value={tagInput}
-                onChange={(e) => setTagInput(e.target.value)}
-                onKeyDown={(e) => handleTagInputKeyDown(e, 'add-form')}
-                className="glass-panel-hover"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                onClick={() => {
-                  setTags(getPendingTags());
-                  setTagInput('');
-                }}
-                className="glass-panel-hover shrink-0"
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-            {tags.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {tags.map((tag) => (
-                  <Badge
-                    key={tag}
-                    variant="secondary"
-                    className="flex items-center gap-1 pl-3 pr-2 py-1"
-                  >
-                    {tag}
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveTag(tag)}
-                      className="ml-1 h-4 w-4 rounded-full hover:bg-accent flex items-center justify-center"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </Badge>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              onClick={() => {
-                toast.info('File upload feature coming soon!');
-              }}
-              className="glass-panel-hover"
-            >
-              <Upload className="h-4 w-4 mr-2" /> Upload File
-            </Button>
-
-            <Button
-              onClick={handleAddEntry}
-              disabled={isAdding || !isPasswordVerified}
-              className="flex-1 ai-primary"
-            >
-              {isAdding ? (
-                <>
-                  <Check className="h-4 w-4 mr-2 animate-spin" />
-                  Adding...
-                </>
-              ) : !isPasswordVerified ? (
-                <>
-                  <Lock className="h-4 w-4 mr-2" />
-                  Password Required
-                </>
-              ) : (
-                <>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Entry
-                </>
-              )}
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* Knowledge Entries List (always visible) */}
-      <div className="space-y-4">
-        <div className="space-y-3">
-          <h2 className="text-xl font-semibold text-foreground/90">
+    <div className="space-y-4">
+      <Tabs defaultValue="add" onValueChange={(value) => setActiveTab(value as 'add' | 'list')}>
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="add" className="flex flex-1 items-center justify-center px-2 h-10 text-sm font-semibold rounded-border border-muted background/60 hover:bg-accent/50 data-[state=active]:background-accent data-[state=active]:foreground-accent-foreground transition-colors">
+            <Plus className="mr-2 h-4 w-4" />
+            Add Entry
+          </TabsTrigger>
+          <TabsTrigger value="list" className="flex flex-1 items-center justify-center px-2 h-10 text-sm font-semibold rounded-border border-muted background/60 hover:bg-accent/50 data-[state=active]:background-accent data-[state=active]:foreground-accent-foreground transition-colors">
+            <FileText className="mr-2 h-4 w-4" />
             Knowledge Base
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            View your knowledge entries (paginated, {totalEntries} total)
-          </p>
-          {!isPasswordVerified && (
-            <div className="flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300 mb-4">
-              <Lock className="h-3.5 w-3.5 shrink-0" />
-              <span>
-                🔒 Knowledge base is locked. Verify your password in Settings to view actual entries.
-              </span>
-            </div>
-          )}
-        </div>
-
-        {knowledgeEntries.length === 0 ? (
-          <div className="text-center py-8">
-            <p className="text-muted-foreground">
-              No knowledge entries yet. Add some entries to get started.
-            </p>
-          </div>
-        ) : (
-          <>
-            {/* Entries List */}
-            <div className={`space-y-4 ${!isPasswordVerified ? 'opacity-50' : ''}`}>
-              {knowledgeEntries.map((entry) => (
-                <div
-                  key={entry.id}
-                  className="glass-panel p-4 rounded-lg border border-indigo-100/20 dark:border-indigo-900/20"
-                >
-                  {editingEntries[entry.id] ? (
-                    // Inline editing form
-                    <div className="space-y-3">
-                      <Input
-                        id={`title-${entry.id}`}
-                        defaultValue={entry.title}
-                        className="glass-panel-hover"
-                      />
-
-                      <Textarea
-                        id={`content-${entry.id}`}
-                        defaultValue={entry.content}
-                        rows={3}
-                        className="glass-panel-hover"
-                      />
-
-                      <div className="space-y-2">
-                        <div className="flex gap-2">
-                          <Select
-                            value={editingCategories[entry.id] ?? entry.category}
-                            onValueChange={(v) =>
-                              setEditingCategories(prev => ({ ...prev, [entry.id]: v }))
-                            }
-                          >
-                            <SelectTrigger className="glass-panel-hover">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent className="glass-panel">
-                              {CATEGORIES.map((cat) => (
-                                <SelectItem key={cat} value={cat}>
-                                  {cat}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-
-                          <div className="flex gap-2">
-                            <Input
-                              id={`tag-input-${entry.id}`}
-                              placeholder="Add tags..."
-                              onKeyDown={(e) => handleTagInputKeyDown(e, entry.id)}
-                              className="glass-panel-hover"
-                            />
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="icon"
-                              onClick={() => handleAddTag(entry.id)}
-                              className="glass-panel-hover shrink-0"
-                            >
-                              <Plus className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-
-                        {entry.tags && entry.tags.length > 0 && (
-                          <div id={`tags-display-${entry.id}`} className="flex flex-wrap gap-2 mt-2">
-                            {entry.tags.map((tag: string) => (
-                              <Badge
-                                key={tag}
-                                variant="secondary"
-                                className="flex items-center gap-1 pl-3 pr-2 py-1"
-                              >
-                                {tag}
-                                <button
-                                  type="button"
-                                  onClick={() => handleRemoveTag(tag)}
-                                  className="ml-1 h-4 w-4 rounded-full hover:bg-accent flex items-center justify-center"
-                                >
-                                  <X className="h-3 w-3" />
-                                </button>
-                              </Badge>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="flex items-center gap-3">
-                        <Button
-                          variant="outline"
-                          onClick={() => handleUpdateEntry(entry.id)}
-                          disabled={isAdding || !isPasswordVerified}
-                          className="flex-1 ai-primary"
-                        >
-                          {isAdding ? (
-                            <>
-                              <Check className="h-4 w-4 mr-2 animate-spin" />
-                              Updating...
-                            </>
-                          ) : (
-                            <>
-                              <Check className="h-4 w-4 mr-2" />
-                              Update Entry
-                            </>
-                          )}
-                        </Button>
-
-                        <Button
-                          variant="outline"
-                          onClick={() => handleCancelEdit(entry.id)}
-                          className="glass-panel-hover"
-                        >
-                          Cancel
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    // Display mode
-                    <div className="flex justify-between items-start mb-2">
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-medium text-indigo-600 dark:text-indigo-300 truncate">
-                          {entry.title}
-                        </h4>
-                        <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-muted-foreground">
-                          <Badge variant="outline" className="text-xs">
-                            {entry.category}
-                          </Badge>
-                          <span>
-                            {entry.created_at ? new Date(entry.created_at).toLocaleDateString() : 'N/A'}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex gap-1 ml-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleEditEntry(entry.id)}
-                          disabled={!isPasswordVerified}
-                          className="h-8 w-8"
-                        >
-                          <Edit className="h-4 w-4 text-indigo-500 hover:text-indigo-600" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDeleteEntry(entry.id)}
-                          disabled={!isPasswordVerified}
-                          className="h-8 w-8"
-                        >
-                          <Trash2 className="h-4 w-4 text-indigo-500 hover:text-indigo-600" />
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-
-                  <p className="text-sm text-muted-foreground line-clamp-2">
-                    {entry.content.substring(0, 100)}
-                    {entry.content.length > 100 ? '...' : ''}
-                  </p>
-
-                  {entry.tags && entry.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {entry.tags.map((tag: string) => (
-                        <Badge key={tag} variant="secondary" className="text-xs">
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            {/* Pagination Controls */}
-            <div className="flex items-center justify-between px-4 py-2 text-sm">
-              <button
-                onClick={prevPage}
-                disabled={currentPage === 1}
-                className={`flex-1 px-3 py-1.5 rounded-md ${currentPage === 1 ? 'opacity-25' : ''} hover:opacity-100`}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-              <span className="text-center flex-1">
-                Page {currentPage} of {totalPages}
-              </span>
-              <button
-                onClick={nextPage}
-                disabled={currentPage === totalPages}
-                className={`flex-1 px-3 py-1.5 rounded-md ${currentPage === totalPages ? 'opacity-25' : ''} hover:opacity-100`}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            </div>
-          </>
-        )}
-      </div>
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="add" className="mt-4">
+          <AddEntryForm
+            isPasswordVerified={isPasswordVerified}
+            isAdding={isAdding}
+            title={title}
+            content={content}
+            category={category}
+            tags={tags}
+            tagInput={tagInput}
+            setTitle={setTitle}
+            setContent={setContent}
+            setCategory={setCategory}
+            setTags={setTags}
+            setTagInput={setTagInput}
+            getPendingTags={getPendingTags}
+            handleAddEntry={handleAddEntry}
+            resetForm={resetForm}
+            handleTagInputKeyDown={handleTagInputKeyDown}
+          />
+        </TabsContent>
+        
+        <TabsContent value="list" className="mt-4">
+          <KnowledgeBaseList
+            knowledgeEntries={knowledgeEntries}
+            totalEntries={totalEntries}
+            currentPage={currentPage}
+            pageSize={pageSize}
+            nextPage={nextPage}
+            prevPage={prevPage}
+            isPasswordVerified={isPasswordVerified}
+            isAdding={isAdding}
+            editingEntries={editingEntries}
+            editingCategories={editingCategories}
+            setEditingEntries={setEditingEntries}
+            setEditingCategories={setEditingCategories}
+            handleUpdateEntry={handleUpdateEntry}
+            handleDeleteEntry={handleDeleteEntry}
+            handleEditEntry={handleEditEntry}
+            handleCancelEdit={handleCancelEdit}
+            handleAddTag={handleAddTag}
+            handleRemoveTag={handleRemoveTag}
+            handleTagInputKeyDown={handleTagInputKeyDown}
+            getPendingTags={getPendingTags}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
