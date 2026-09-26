@@ -12,13 +12,15 @@ import {
   Lock,
   ChevronLeft,
   ChevronRight,
+  AlertCircle,
+  Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
+import { Badge } from '@/components/ui/badge>;
 import {
   Select,
   SelectContent,
@@ -26,6 +28,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { ChunkStatusBadge } from '@/components/chunk-status-badge>;
+import { ChunkNowButton } from '@/components/chunk-now-button>;
+import { useJarvis } from '@/lib/jarvis-provider>;
 
 const CATEGORIES = [
   'Stack',
@@ -82,6 +87,32 @@ export function KnowledgeBaseList({
   getPendingTags,
 }: KnowledgeBaseListProps) {
   const totalPages = Math.max(Math.ceil(totalEntries / pageSize), 1);
+  const [isChunkingAll, setIsChunkingAll] = useState(false);
+  const [errorChunkAll, setErrorChunkAll] = useState<string | null>(null);
+  const { refetchKnowledgeEntries } = useJarvis();
+
+  // Function to handle chunking all entries
+  const handleChunkAll = async () => {
+    setIsChunkingAll(true);
+    setErrorChunkAll(null);
+    try {
+      const response = await fetch('/api/knowledge-entries/chunk-all', {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to chunk all entries');
+      }
+
+      // Refetch the knowledge entries to update the chunked status
+      await refetchKnowledgeEntries();
+    } catch (err: any) {
+      setErrorChunkAll(err.message || 'Something went wrong');
+    } finally {
+      setIsChunkingAll(false);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -107,9 +138,40 @@ export function KnowledgeBaseList({
           <p className="text-muted-foreground">
             No knowledge entries yet. Add some entries to get started.
           </p>
-        </div>
+        }
       ) : (
         <>
+          {/* Chunk All Button (only show if there are unchunked entries) */}
+          {knowledgeEntries.some((entry) => !entry.chunked) && (
+            <div className="mb-4">
+              <Button
+                onClick={handleChunkAll}
+                disabled={isAdding || !isPasswordVerified || isChunkingAll}
+                className="w-full ai-secondary"
+              >
+                {isChunkingAll ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Chunking All...
+                  </>
+                ) : errorChunkAll ? (
+                  <>
+                    <AlertCircle className="h-4 w-4 mr-2" />
+                    Chunk All Failed
+                  </>
+                ) : (
+                  <>
+                    <Check className="h-4 w-4 mr-2" />
+                    Chunk All
+                  </>
+                )}
+              </Button>
+              {errorChunkAll && (
+                <p className="mt-2 text-sm text-red-600">{errorChunkAll}</p>
+              )}
+            </div>
+          )}
+
           {/* Entries List */}
           <div className="space-y-4">
             {knowledgeEntries.map((entry) => (
@@ -225,7 +287,7 @@ export function KnowledgeBaseList({
                   </div>
                 ) : (
                   // Display mode
-                  <>
+                  <div>
                     <div className="flex justify-between items-start mb-2">
                       <div className="flex-1 min-w-0">
                         <h4 className="font-medium text-indigo-600 dark:text-indigo-300 truncate">
@@ -249,7 +311,7 @@ export function KnowledgeBaseList({
                           className="h-8 w-8"
                         >
                           <Edit className="h-4 w-4 text-indigo-500 hover:text-indigo-600" />
-                        </Button>
+                        </Button
                         <Button
                           variant="ghost"
                           size="icon"
@@ -268,15 +330,26 @@ export function KnowledgeBaseList({
                     </p>
 
                     {entry.tags && entry.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-2">
+                      <div className="flex flex-wrap gap-1 mt-2>
                         {entry.tags.map((tag: string) => (
                           <Badge key={tag} variant="secondary" className="text-xs">
                             {isPasswordVerified ? tag : '•••••••'}
                           </Badge>
-                        ))}
-                      </div>
+                        ))
+                      }
                     )}
-                  </>
+
+                    {/* Chunking Status and Chunk Now Button */}
+                    <div className="flex items-center gap-2 mt-2>
+                      <ChunkStatusBadge chunked={entry.chunked} />
+                      {!entry.chunked && isPasswordVerified && !isAdding && (
+                        <ChunkNowButton
+                          entryId={entry.id}
+                          onChunkSuccess={refetchKnowledgeEntries}
+                        />
+                      )}
+                    </div>
+                  </div>
                 )}
               </div>
             ))}
@@ -290,7 +363,7 @@ export function KnowledgeBaseList({
               className={`flex-1 px-3 py-1.5 rounded-md ${currentPage === 1 ? 'opacity-25' : ''} hover:opacity-100`}
             >
               <ChevronLeft className="h-4 w-4" />
-            </button>
+            </button
             <span className="text-center flex-1">
               Page {currentPage} of {totalPages}
             </span>

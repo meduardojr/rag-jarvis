@@ -26,6 +26,7 @@ interface JarvisContextType {
   verifyPassword: (password: string) => Promise<boolean>;
   logout: () => Promise<void>;
   refreshData: () => Promise<void>;
+  refetchKnowledgeEntries: () => Promise<void>;
 }
 
 const JarvisContext = createContext<JarvisContextType | undefined>(undefined);
@@ -91,6 +92,11 @@ export function JarvisProvider({ children }: { children: ReactNode }) {
 
   const loadKnowledgeEntries = async () => {
     return await fetchKnowledgeEntries(currentPage, pageSize);
+  };
+
+  // Function to refetch only the knowledge entries
+  const refetchKnowledgeEntries = async () => {
+    await loadKnowledgeEntries();
   };
 
   const fetchKnowledgeEntries = async (page: number, limit: number): Promise<boolean> => {
@@ -324,6 +330,7 @@ export function JarvisProvider({ children }: { children: ReactNode }) {
       verifyPassword,
       logout,
       refreshData,
+      refetchKnowledgeEntries,
     }}>
       {children}
     </JarvisContext.Provider>
