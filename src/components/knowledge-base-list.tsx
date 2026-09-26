@@ -111,7 +111,7 @@ export function KnowledgeBaseList({
       ) : (
         <>
           {/* Entries List */}
-          <div className={`space-y-4 ${!isPasswordVerified ? 'opacity-50' : ''}`}>
+          <div className="space-y-4">
             {knowledgeEntries.map((entry) => (
               <div
                 key={entry.id}
@@ -229,11 +229,11 @@ export function KnowledgeBaseList({
                     <div className="flex justify-between items-start mb-2">
                       <div className="flex-1 min-w-0">
                         <h4 className="font-medium text-indigo-600 dark:text-indigo-300 truncate">
-                          {entry.title}
+                          {isPasswordVerified ? entry.title : '•••••••'}
                         </h4>
                         <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-muted-foreground">
                           <Badge variant="outline" className="text-xs">
-                            {entry.category}
+                            {isPasswordVerified ? entry.category : '•••••••'}
                           </Badge>
                           <span>
                             {entry.created_at ? new Date(entry.created_at).toLocaleDateString() : 'N/A'}
@@ -263,15 +263,15 @@ export function KnowledgeBaseList({
                     </div>
 
                     <p className="text-sm text-muted-foreground line-clamp-2">
-                      {entry.content.substring(0, 100)}
-                      {entry.content.length > 100 ? '...' : ''}
+                      {isPasswordVerified ? entry.content.substring(0, 100) : ''}
+                      {entry.content.length > 100 && isPasswordVerified ? '...' : ''}
                     </p>
 
                     {entry.tags && entry.tags.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-2">
                         {entry.tags.map((tag: string) => (
                           <Badge key={tag} variant="secondary" className="text-xs">
-                            {tag}
+                            {isPasswordVerified ? tag : '•••••••'}
                           </Badge>
                         ))}
                       </div>
