@@ -3,9 +3,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { generateEmbedding } from '@/lib/embeddings';
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-const CLASSIFICATION_MODEL = 'gpt-3.5-turbo';
 const GENERATION_MODEL = 'gpt-3.5-turbo';
 const OUT_OF_SCOPE_MESSAGE = "I'm sorry, but I can only answer questions about your own technical stack, skills, past projects, tools, or what you know/do. Please ask a question related to your knowledge base.";
+const SCOPE_CLASSIFICATION_THRESHOLD = 0.85;
 
 // Helper function to call OpenAI API
 async function callOpenAI(model: string, systemPrompt: string, userPrompt: string): Promise<string> {
@@ -40,7 +40,7 @@ async function callOpenAI(model: string, systemPrompt: string, userPrompt: strin
 
 // Process a chunk's text for visitor mode: extract redaction instructions and return cleaned text
 function processChunkForVisitor(chunkText: string): { cleanedText: string, redactionInstructions: string[] } {
-  const lines = chunkText.split('\\n');
+  const lines = chunkText.split('\n');
   const cleanedLines: string[] = [];
   const instructions: string[] = [];
 
@@ -58,7 +58,7 @@ function processChunkForVisitor(chunkText: string): { cleanedText: string, redac
   }
 
   return {
-    cleanedText: cleanedLines.join('\\n'),
+    cleanedText: cleanedLines.join('\n'),
     redactionInstructions: instructions,
   };
 }
@@ -66,7 +66,6 @@ function processChunkForVisitor(chunkText: string): { cleanedText: string, redac
 // Helper function to get a summary of the knowledge base categories and tags
 async function getKnowledgeBaseSummary(): Promise<string> {
   try {
-    // Get distinct categories and tags from knowledge_entries
     const rows = await sql`
       SELECT DISTINCT category, tags
       FROM knowledge_entries
@@ -81,13 +80,11 @@ async function getKnowledgeBaseSummary(): Promise<string> {
         categories.add(row.category);
       }
       if (row.tags) {
-        // Assuming tags is a string array
         if (Array.isArray(row.tags)) {
           row.tags.forEach((tag: string) => {
             if (tag) tagsSet.add(tag);
           });
         } else if (typeof row.tags === 'string') {
-          // If it's a comma-separated string, split
           const tagsArray = row.tags.split(',').map(t => t.trim());
           tagsArray.forEach((tag: string) => {
             if (tag) tagsSet.add(tag);
@@ -100,23 +97,13 @@ async function getKnowledgeBaseSummary(): Promise<string> {
     const tagsArray = Array.from(tagsSet).sort();
 
     let summary = 'Categories covered: ';
-    if (categoriesArray.length > 0) {
-      summary += categoriesArray.join(', ');
-    } else {
-      summary += 'none';
-    }
-
+    summary += categoriesArray.length > 0 ? categoriesArray.join(', ') : 'none';
     summary += '. Tags used: ';
-    if (tagsArray.length > 0) {
-      summary += tagsArray.join(', ');
-    } else {
-      summary += 'none';
-    }
+    summary += tagsArray.length > 0 ? tagsArray.join(', ') : 'none';
 
     return summary;
   } catch (error) {
     console.error('Error getting knowledge base summary:', error);
-    // Fallback to a generic summary if we fail
     return 'Technical stack, skills, past projects, tools, and personal knowledge.';
   }
 }
@@ -136,29 +123,21 @@ export async function POST(request: NextRequest) {
     const SESSION_COOKIE = 'jarvis-session';
     const isOwner = request.cookies.get(SESSION_COOKIE)?.value === 'verified';
 
-    // Step 1: Classify the question using Jev model
+    // Step 1: Classify the question using Jev (sole classification method)
     let isInScope = false;
-    // Variables to capture results and latencies for logging
-    let jevResult = null;
-    let jevLatencyMs = null;
-    let jevError = null;
-    // Logging variables (to be filled after Jev call)
-    let jevNoulProbability = null;
-    let jevDecision = null;
+    let jevNoulProbability: number | null = null;
+    let jevDecision: boolean | null = null;
+    let jevLatencyMs: number | null = null;
 
-    // Jev call
     const jevStart = Date.now();
     try {
-      // TYPESAFE_API_KEY must be set in .env.local and the deployment environment
       const TYPESAFE_API_KEY = process.env.TYPESAFE_API_KEY;
       if (!TYPESAFE_API_KEY) {
         throw new Error('TYPESAFE_API_KEY is not set');
       }
 
-      // Get the knowledge base summary for the state
       const aboutMeSummary = await getKnowledgeBaseSummary();
 
-      // Build the Jev request payload
       const requestPayload = {
         state: {
           user_question: question,
@@ -182,7 +161,6 @@ export async function POST(request: NextRequest) {
         }
       };
 
-      // Call the Jev API
       const jevResponse = await fetch('https://api.typesafe.ai/v1/systemone', {
         method: 'POST',
         headers: {
@@ -197,35 +175,23 @@ export async function POST(request: NextRequest) {
       }
 
       const jevData = await jevResponse.json();
-      jevResult = jevData; // Store for logging
       jevLatencyMs = Date.now() - jevStart;
 
-      // Extract the noul probability for is_about_skills (used for the real decision)
-      const isAboutSkillsProbability = jevData.answers.is_about_skills.noul;
-      const SCOPE_CLASSIFICATION_THRESHOLD = 0.85;
-      isInScope = isAboutSkillsProbability >= SCOPE_CLASSIFICATION_THRESHOLD;
+      jevNoulProbability = jevData.answers.is_about_skills.noul;
+      isInScope = jevNoulProbability >= SCOPE_CLASSIFICATION_THRESHOLD;
+      jevDecision = isInScope;
     } catch (classificationError) {
-      jevError = classificationError;
       jevLatencyMs = Date.now() - jevStart;
       console.error('Error classifying question with Jev:', classificationError);
       // If classification fails, we assume out of scope to be safe
       isInScope = false;
     }
 
-    // Prepare logging data (we'll use these when inserting the log)
-    jevNoulProbability = jevResult ? jevResult.answers.is_about_skills.noul : null;
-    jevDecision = jevResult ? (jevResult.answers.is_about_skills.noul >= 0.85) : null;
-    // Old method not called; set to null
-    const oldMethodDecision = null;
-    const disagreement = null;
-    const oldMethodLatencyMs = null;
-
     // Step 2: If out of scope, return the fixed message
     if (!isInScope) {
-      // Log the out-of-scope question
       await sql`
-        INSERT INTO public.about_me_chat_log (question, in_scope, answer, is_owner, jev_noul_probability, jev_decision, old_method_decision, disagreement, jev_latency_ms, old_method_latency_ms)
-        VALUES (${question}, ${false}, ${OUT_OF_SCOPE_MESSAGE}, ${isOwner}, ${jevNoulProbability}, ${jevDecision}, ${oldMethodDecision}, ${disagreement}, ${jevLatencyMs}, ${oldMethodLatencyMs})
+        INSERT INTO public.about_me_chat_log (question, in_scope, answer, is_owner, jev_noul_probability, jev_decision, jev_latency_ms)
+        VALUES (${question}, ${false}, ${OUT_OF_SCOPE_MESSAGE}, ${isOwner}, ${jevNoulProbability}, ${jevDecision}, ${jevLatencyMs})
       `;
 
       return NextResponse.json({
@@ -236,7 +202,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Step 3: In-scope - use RAG to generate an answer
-    // Generate embedding for the question
     let queryEmbedding: number[] | null = null;
     try {
       queryEmbedding = await generateEmbedding(question);
@@ -255,7 +220,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Search for relevant chunks using vector similarity
     const similarChunks = await sql`
       SELECT 
         c.id,
@@ -272,27 +236,22 @@ export async function POST(request: NextRequest) {
       LIMIT 5
     `;
 
-    // Check if we have relevant results (similarity threshold: 0.5)
     const relevantChunks = similarChunks.filter((chunk: any) => chunk.similarity > 0.5);
 
     let answer: string;
     if (relevantChunks.length === 0) {
-      // No relevant chunks found
       answer = "I don't have enough information in your knowledge base to answer this question. Consider adding relevant notes about this topic to improve future responses.";
     } else {
-      // Process chunks based on owner/visitor status
       const processedChunks: { cleanedText: string, title: string }[] = [];
       const allRedactionInstructions: string[] = [];
 
       for (const chunk of relevantChunks) {
         if (isOwner) {
-          // Owner: use the full chunk text, ignore redaction
           processedChunks.push({
             cleanedText: chunk.chunk_text,
             title: chunk.title,
           });
         } else {
-          // Visitor: extract redaction instructions and clean the text
           const processed = processChunkForVisitor(chunk.chunk_text);
           processedChunks.push({
             cleanedText: processed.cleanedText,
@@ -302,26 +261,22 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // Build context from processed chunks
       const context = processedChunks.map((chunk) => 
-        `[From: ${chunk.title}]\\n${chunk.cleanedText}`
-      ).join('\\n\\n---\\n\\n');
+        `[From: ${chunk.title}]\n${chunk.cleanedText}`
+      ).join('\n\n---\n\n');
 
-      // Prepare the system prompt for answer generation
       let baseSystemPrompt = "You are a helpful assistant that answers questions based on the provided context from the user's knowledge base. Answer the question based only on the context provided. If the context does not contain enough information to answer the question, say that you don't have enough information.";
       if (!isOwner && allRedactionInstructions.length > 0) {
-        // For visitor mode with redaction instructions, add them to the system prompt
-        const uniqueInstructions = [...new Set(allRedactionInstructions)]; // deduplicate
+        const uniqueInstructions = [...new Set(allRedactionInstructions)];
         const redactionPrompt = `You must follow these redaction instructions: ${uniqueInstructions.join('; ')}.`;
         baseSystemPrompt = `${baseSystemPrompt} ${redactionPrompt}`;
       }
 
-      // Generate answer using the LLM
       try {
         answer = await callOpenAI(
           GENERATION_MODEL,
           baseSystemPrompt,
-          `Context:\\n${context}\\n\\nQuestion: ${question}`
+          `Context:\n${context}\n\nQuestion: ${question}`
         );
       } catch (generationError) {
         console.error('Error generating answer:', generationError);
@@ -329,10 +284,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Log the question and answer
     await sql`
-      INSERT INTO public.about_me_chat_log (question, in_scope, answer, is_owner, jev_noul_probability, jev_decision, old_method_decision, disagreement, jev_latency_ms, old_method_latency_ms)
-      VALUES (${question}, ${true}, ${answer}, ${isOwner}, ${jevNoulProbability}, ${jevDecision}, ${oldMethodDecision}, ${disagreement}, ${jevLatencyMs}, ${oldMethodLatencyMs})
+      INSERT INTO public.about_me_chat_log (question, in_scope, answer, is_owner, jev_noul_probability, jev_decision, jev_latency_ms)
+      VALUES (${question}, ${true}, ${answer}, ${isOwner}, ${jevNoulProbability}, ${jevDecision}, ${jevLatencyMs})
     `;
 
     return NextResponse.json({
