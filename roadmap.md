@@ -40,11 +40,11 @@ This document outlines the planned, in-progress, and completed features for the 
 - ✅ Agent + model selection for Generate AI Prompt (pick agent first, then a model valid for that agent)
 - ✅ Desktop layout fixes (side-by-side hero/intro, square aspect ratio, tag contrast, general max-width/grid cleanup)
 - ✅ About Me Chat: constrained Q&A mode scoped to user's knowledge base with owner recognition, in-content redaction notes (REDACTION: convention), and full question logging
-- ✅ Frontend: "Chunk Now" (single) + "Chunk All" (bulk) buttons wired to existing endpoints
+- ✅ Frontend: "Chunk Now" (single) + "Chunk All" (bulk) buttons wired to existing endpoints, with chunking status badge
+- ✅ Jev-based scope classification for About Me Chat (guardrail swap complete, shadow-mode logic removed, single classification call confirmed via code review — live request testing not yet performed)
 
 
 ## In Progress
-- 🚧 UI indicators for chunking status (badge/showing "unchunked" entries)
 - 🚧 Retry mechanism for failed chunking from the UI
 - 🚧 Tag management UI enhancements
 - 🚧 History view with model tracking
@@ -52,7 +52,6 @@ This document outlines the planned, in-progress, and completed features for the 
 - 🚧 Export/import knowledge base
 - 🚧 Session expiry + rate limiting
 - 🚧 Improved error reporting for chunking/embedding failures
-- 🚧 Jev-based scope classification for About Me Chat (planned: schema/payload doc → guardrail swap → shadow-mode validation, not yet started)
 
 
 
