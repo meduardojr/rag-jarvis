@@ -177,9 +177,11 @@ export async function POST(request: NextRequest) {
       const jevData = await jevResponse.json();
       jevLatencyMs = Date.now() - jevStart;
 
-      jevNoulProbability = jevData.answers.is_about_skills.noul;
-      isInScope = jevNoulProbability >= SCOPE_CLASSIFICATION_THRESHOLD;
+      const noulProbability = jevData.answers.is_about_skills.noul;
+      jevNoulProbability = noulProbability;
+      isInScope = noulProbability >= SCOPE_CLASSIFICATION_THRESHOLD;
       jevDecision = isInScope;
+
     } catch (classificationError) {
       jevLatencyMs = Date.now() - jevStart;
       console.error('Error classifying question with Jev:', classificationError);
