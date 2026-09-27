@@ -63,6 +63,64 @@ function processChunkForVisitor(chunkText: string): { cleanedText: string, redac
   };
 }
 
+// Helper function to get a summary of the knowledge base categories and tags
+async function getKnowledgeBaseSummary(): Promise<string> {
+  try {
+    // Get distinct categories and tags from knowledge_entries
+    const rows = await sql`
+      SELECT DISTINCT category, tags
+      FROM knowledge_entries
+      WHERE category IS NOT NULL OR tags IS NOT NULL
+    `;
+
+    const categories = new Set<string>();
+    const tagsSet = new Set<string>();
+
+    for (const row of rows) {
+      if (row.category) {
+        categories.add(row.category);
+      }
+      if (row.tags) {
+        // Assuming tags is a string array
+        if (Array.isArray(row.tags)) {
+          row.tags.forEach((tag: string) => {
+            if (tag) tagsSet.add(tag);
+          });
+        } else if (typeof row.tags === 'string') {
+          // If it's a comma-separated string, split
+          const tagsArray = row.tags.split(',').map(t => t.trim());
+          tagsArray.forEach((tag: string) => {
+            if (tag) tagsSet.add(tag);
+          });
+        }
+      }
+    }
+
+    const categoriesArray = Array.from(categories).sort();
+    const tagsArray = Array.from(tagsSet).sort();
+
+    let summary = 'Categories covered: ';
+    if (categoriesArray.length > 0) {
+      summary += categoriesArray.join(', ');
+    } else {
+      summary += 'none';
+    }
+
+    summary += '. Tags used: ';
+    if (tagsArray.length > 0) {
+      summary += tagsArray.join(', ');
+    } else {
+      summary += 'none';
+    }
+
+    return summary;
+  } catch (error) {
+    console.error('Error getting knowledge base summary:', error);
+    // Fallback to a generic summary if we fail
+    return 'Technical stack, skills, past projects, tools, and personal knowledge.';
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { question } = await request.json();
