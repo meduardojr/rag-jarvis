@@ -40,7 +40,7 @@ async function callOpenAI(model: string, systemPrompt: string, userPrompt: strin
 
 // Process a chunk's text for visitor mode: extract redaction instructions and return cleaned text
 function processChunkForVisitor(chunkText: string): { cleanedText: string, redactionInstructions: string[] } {
-  const lines = chunkText.split('\n');
+  const lines = chunkText.split('\\n');
   const cleanedLines: string[] = [];
   const instructions: string[] = [];
 
@@ -58,7 +58,7 @@ function processChunkForVisitor(chunkText: string): { cleanedText: string, redac
   }
 
   return {
-    cleanedText: cleanedLines.join('\n'),
+    cleanedText: cleanedLines.join('\\n'),
     redactionInstructions: instructions,
   };
 }
@@ -136,116 +136,97 @@ export async function POST(request: NextRequest) {
     const SESSION_COOKIE = 'jarvis-session';
     const isOwner = request.cookies.get(SESSION_COOKIE)?.value === 'verified';
 
-    // Step 1: Classify the question using Jev model (with shadow mode for old method)
-            let isInScope = false;
-            // Variables to capture results and latencies for logging
-                    let jevResult = null;
-                    let jevLatencyMs = null;
-                    let jevError = null;
-                    let oldMethodResult = null;
-                    let oldMethodLatencyMs = null;
-                    let oldMethodError = null;
-                    // Logging variables (to be filled after both calls)
-                    let jevNoulProbability = null;
-                    let jevDecision = null;
-                    let oldMethodDecision = null;
-                    let disagreement = null;
-    
-            // Jev call
-            const jevStart = Date.now();
-            try {
-              // TYPESAFE_API_KEY must be set in .env.local and the deployment environment
-              const TYPESAFE_API_KEY = process.env.TYPESAFE_API_KEY;
-              if (!TYPESAFE_API_KEY) {
-                throw new Error('TYPESAFE_API_KEY is not set');
-              }
-    
-              // Get the knowledge base summary for the state
-              const aboutMeSummary = await getKnowledgeBaseSummary();
-    
-              // Build the Jev request payload
-              const requestPayload = {
-                state: {
-                  user_question: question,
-                  about_me_summary: aboutMeSummary,
-                },
-                model: 'jev-latest',
-                questions: {
-                  is_about_skills: {
-                    type: 'noul',
-                    instructions: "Is this question asking about the author's own technical stack, skills, past projects, tools, or what they personally know/do?",
-                    criteria: {
-                      true: "The question is about the author's personal technical stack, skills, past projects, tools, or what they personally know/do.",
-                      false: "The question is not about the author's personal technical stack, skills, past projects, tools, or what they personally know/do. It might be about general knowledge, other people, or unrelated topics."
-                    }
-                  },
-                  relevance_score: {
-                    type: 'score',
-                    instructions: "How relevant is the question to the author's skills, knowledge, or work?",
-                    criteria: ["Unrelated", "Loosely related", "Directly about my skills/work"]
-                  }
-                }
-              };
-    
-              // Call the Jev API
-              const jevResponse = await fetch('https://api.typesafe.ai/v1/systemone', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${TYPESAFE_API_KEY}`,
-                },
-                body: JSON.stringify(requestPayload),
-              });
-    
-              if (!jevResponse.ok) {
-                throw new Error(`Jev API error: ${jevResponse.status}`);
-              }
-    
-              const jevData = await jevResponse.json();
-              jevResult = jevData; // Store for logging
-              jevLatencyMs = Date.now() - jevStart;
-    
-              // Extract the noul probability for is_about_skills (used for the real decision)
-              const isAboutSkillsProbability = jevData.answers.is_about_skills.noul;
-              const SCOPE_CLASSIFICATION_THRESHOLD = 0.85;
-              isInScope = isAboutSkillsProbability >= SCOPE_CLASSIFICATION_THRESHOLD;
-            } catch (classificationError) {
-              jevError = classificationError;
-              jevLatencyMs = Date.now() - jevStart;
-              console.error('Error classifying question with Jev:', classificationError);
-              // If classification fails, we assume out of scope to be safe
-              isInScope = false;
+    // Step 1: Classify the question using Jev model
+    let isInScope = false;
+    // Variables to capture results and latencies for logging
+    let jevResult = null;
+    let jevLatencyMs = null;
+    let jevError = null;
+    // Logging variables (to be filled after Jev call)
+    let jevNoulProbability = null;
+    let jevDecision = null;
+
+    // Jev call
+    const jevStart = Date.now();
+    try {
+      // TYPESAFE_API_KEY must be set in .env.local and the deployment environment
+      const TYPESAFE_API_KEY = process.env.TYPESAFE_API_KEY;
+      if (!TYPESAFE_API_KEY) {
+        throw new Error('TYPESAFE_API_KEY is not set');
+      }
+
+      // Get the knowledge base summary for the state
+      const aboutMeSummary = await getKnowledgeBaseSummary();
+
+      // Build the Jev request payload
+      const requestPayload = {
+        state: {
+          user_question: question,
+          about_me_summary: aboutMeSummary,
+        },
+        model: 'jev-latest',
+        questions: {
+          is_about_skills: {
+            type: 'noul',
+            instructions: "Is this question asking about the author's own technical stack, skills, past projects, tools, or what they personally know/do?",
+            criteria: {
+              true: "The question is about the author's personal technical stack, skills, past projects, tools, or what they personally know/do.",
+              false: "The question is not about the author's personal technical stack, skills, past projects, tools, or what they personally know/do. It might be about general knowledge, other people, or unrelated topics."
             }
-    
-            // Old method call (original lightweight LLM yes/no)
-            const oldStart = Date.now();
-            try {
-              const classificationResponse = await callOpenAI(
-                CLASSIFICATION_MODEL,
-                "Is this question asking about the user's own technical stack, skills, past projects, tools, or what they know/do? Answer strictly yes or no.",
-                question
-              );
-              oldMethodResult = classificationResponse;
-              oldMethodLatencyMs = Date.now() - oldStart;
-            } catch (err) {
-              oldMethodError = err;
-              oldMethodLatencyMs = Date.now() - oldStart;
-              console.error('Error classifying question with old method:', err);
-            }
-    
-            // Prepare logging data (we'll use these when inserting the log)
-                    jevNoulProbability = jevResult ? jevResult.answers.is_about_skills.noul : null;
-                    jevDecision = jevResult ? (jevResult.answers.is_about_skills.noul >= 0.85) : null;
-                    oldMethodDecision = oldMethodResult ? oldMethodResult.toLowerCase().includes('yes') : null;
-                    disagreement = (jevDecision !== null && oldMethodDecision !== null) ? (jevDecision !== oldMethodDecision) : null;
+          },
+          relevance_score: {
+            type: 'score',
+            instructions: "How relevant is the question to the author's skills, knowledge, or work?",
+            criteria: ["Unrelated", "Loosely related", "Directly about my skills/work"]
+          }
+        }
+      };
+
+      // Call the Jev API
+      const jevResponse = await fetch('https://api.typesafe.ai/v1/systemone', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${TYPESAFE_API_KEY}`,
+        },
+        body: JSON.stringify(requestPayload),
+      });
+
+      if (!jevResponse.ok) {
+        throw new Error(`Jev API error: ${jevResponse.status}`);
+      }
+
+      const jevData = await jevResponse.json();
+      jevResult = jevData; // Store for logging
+      jevLatencyMs = Date.now() - jevStart;
+
+      // Extract the noul probability for is_about_skills (used for the real decision)
+      const isAboutSkillsProbability = jevData.answers.is_about_skills.noul;
+      const SCOPE_CLASSIFICATION_THRESHOLD = 0.85;
+      isInScope = isAboutSkillsProbability >= SCOPE_CLASSIFICATION_THRESHOLD;
+    } catch (classificationError) {
+      jevError = classificationError;
+      jevLatencyMs = Date.now() - jevStart;
+      console.error('Error classifying question with Jev:', classificationError);
+      // If classification fails, we assume out of scope to be safe
+      isInScope = false;
+    }
+
+    // Prepare logging data (we'll use these when inserting the log)
+    jevNoulProbability = jevResult ? jevResult.answers.is_about_skills.noul : null;
+    jevDecision = jevResult ? (jevResult.answers.is_about_skills.noul >= 0.85) : null;
+    // Old method not called; set to null
+    const oldMethodDecision = null;
+    const disagreement = null;
+    const oldMethodLatencyMs = null;
 
     // Step 2: If out of scope, return the fixed message
     if (!isInScope) {
       // Log the out-of-scope question
       await sql`
-              INSERT INTO public.about_me_chat_log (question, in_scope, answer, is_owner, jev_noul_probability, jev_decision, old_method_decision, disagreement, jev_latency_ms, old_method_latency_ms)
-              VALUES (${question}, ${false}, ${OUT_OF_SCOPE_MESSAGE}, ${isOwner}, ${jevNoulProbability}, ${jevDecision}, ${oldMethodDecision}, ${disagreement}, ${jevLatencyMs}, ${oldMethodLatencyMs})
-            `;
+        INSERT INTO public.about_me_chat_log (question, in_scope, answer, is_owner, jev_noul_probability, jev_decision, old_method_decision, disagreement, jev_latency_ms, old_method_latency_ms)
+        VALUES (${question}, ${false}, ${OUT_OF_SCOPE_MESSAGE}, ${isOwner}, ${jevNoulProbability}, ${jevDecision}, ${oldMethodDecision}, ${disagreement}, ${jevLatencyMs}, ${oldMethodLatencyMs})
+      `;
 
       return NextResponse.json({
         answer: OUT_OF_SCOPE_MESSAGE,
@@ -323,8 +304,8 @@ export async function POST(request: NextRequest) {
 
       // Build context from processed chunks
       const context = processedChunks.map((chunk) => 
-        `[From: ${chunk.title}]\n${chunk.cleanedText}`
-      ).join('\n\n---\n\n');
+        `[From: ${chunk.title}]\\n${chunk.cleanedText}`
+      ).join('\\n\\n---\\n\\n');
 
       // Prepare the system prompt for answer generation
       let baseSystemPrompt = "You are a helpful assistant that answers questions based on the provided context from the user's knowledge base. Answer the question based only on the context provided. If the context does not contain enough information to answer the question, say that you don't have enough information.";
@@ -340,7 +321,7 @@ export async function POST(request: NextRequest) {
         answer = await callOpenAI(
           GENERATION_MODEL,
           baseSystemPrompt,
-          `Context:\n${context}\n\nQuestion: ${question}`
+          `Context:\\n${context}\\n\\nQuestion: ${question}`
         );
       } catch (generationError) {
         console.error('Error generating answer:', generationError);
@@ -350,9 +331,9 @@ export async function POST(request: NextRequest) {
 
     // Log the question and answer
     await sql`
-            INSERT INTO public.about_me_chat_log (question, in_scope, answer, is_owner, jev_noul_probability, jev_decision, old_method_decision, disagreement, jev_latency_ms, old_method_latency_ms)
-            VALUES (${question}, ${true}, ${answer}, ${isOwner}, ${jevNoulProbability}, ${jevDecision}, ${oldMethodDecision}, ${disagreement}, ${jevLatencyMs}, ${oldMethodLatencyMs})
-          `;
+      INSERT INTO public.about_me_chat_log (question, in_scope, answer, is_owner, jev_noul_probability, jev_decision, old_method_decision, disagreement, jev_latency_ms, old_method_latency_ms)
+      VALUES (${question}, ${true}, ${answer}, ${isOwner}, ${jevNoulProbability}, ${jevDecision}, ${oldMethodDecision}, ${disagreement}, ${jevLatencyMs}, ${oldMethodLatencyMs})
+    `;
 
     return NextResponse.json({
       answer,
