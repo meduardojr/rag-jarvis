@@ -85,7 +85,7 @@ async function getKnowledgeBaseSummary(): Promise<string> {
             if (tag) tagsSet.add(tag);
           });
         } else if (typeof row.tags === 'string') {
-          const tagsArray = row.tags.split(',').map(t => t.trim());
+          const tagsArray = row.tags.split(',').map((t: string) => t.trim());
           tagsArray.forEach((tag: string) => {
             if (tag) tagsSet.add(tag);
           });
