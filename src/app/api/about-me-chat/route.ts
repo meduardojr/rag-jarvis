@@ -136,20 +136,69 @@ export async function POST(request: NextRequest) {
     const SESSION_COOKIE = 'jarvis-session';
     const isOwner = request.cookies.get(SESSION_COOKIE)?.value === 'verified';
 
-    // Step 1: Classify the question
-    let isInScope = false;
-    try {
-      const classificationResponse = await callOpenAI(
-        CLASSIFICATION_MODEL,
-        "Is this question asking about the user's own technical stack, skills, past projects, tools, or what they know/do? Answer strictly yes or no.",
-        question
-      );
-      isInScope = classificationResponse.toLowerCase().includes('yes');
-    } catch (classificationError) {
-      console.error('Error classifying question:', classificationError);
-      // If classification fails, we assume out of scope to be safe
-      isInScope = false;
-    }
+    // Step 1: Classify the question using Jev model
+        let isInScope = false;
+        try {
+          // TYPESAFE_API_KEY must be set in .env.local and the deployment environment
+          const TYPESAFE_API_KEY = process.env.TYPESAFE_API_KEY;
+          if (!TYPESAFE_API_KEY) {
+            throw new Error('TYPESAFE_API_KEY is not set');
+          }
+    
+          // Get the knowledge base summary for the state
+          const aboutMeSummary = await getKnowledgeBaseSummary();
+    
+          // Build the Jev request payload
+          const requestPayload = {
+            state: {
+              user_question: question,
+              about_me_summary: aboutMeSummary,
+            },
+            model: 'jev-latest',
+            questions: {
+              is_about_skills: {
+                type: 'noul',
+                instructions: "Is this question asking about the author's own technical stack, skills, past projects, tools, or what they personally know/do?",
+                criteria: {
+                  true: "The question is about the author's personal technical stack, skills, past projects, tools, or what they personally know/do.",
+                  false: "The question is not about the author's personal technical stack, skills, past projects, tools, or what they personally know/do. It might be about general knowledge, other people, or unrelated topics."
+                }
+              },
+              relevance_score: {
+                type: 'score',
+                instructions: "How relevant is the question to the author's skills, knowledge, or work?",
+                criteria: ["Unrelated", "Loosely related", "Directly about my skills/work"]
+              }
+            }
+          };
+    
+          // Call the Jev API
+          const jevResponse = await fetch('https://api.typesafe.ai/v1/systemone', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${TYPESAFE_API_KEY}`,
+            },
+            body: JSON.stringify(requestPayload),
+          });
+    
+          if (!jevResponse.ok) {
+            throw new Error(`Jev API error: ${jevResponse.status}`);
+          }
+    
+          const jevData = await jevResponse.json();
+    
+          // Extract the noul probability for is_about_skills
+          const isAboutSkillsProbability = jevData.answers.is_about_skills.noul;
+    
+          // Apply the threshold
+          const SCOPE_CLASSIFICATION_THRESHOLD = 0.85;
+          isInScope = isAboutSkillsProbability >= SCOPE_CLASSIFICATION_THRESHOLD;
+        } catch (classificationError) {
+          console.error('Error classifying question with Jev:', classificationError);
+          // If classification fails, we assume out of scope to be safe
+          isInScope = false;
+        }
 
     // Step 2: If out of scope, return the fixed message
     if (!isInScope) {
