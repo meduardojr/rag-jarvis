@@ -49,13 +49,15 @@ We propose two questions for the Jev model:
 }
 ```
 
+> **Note**: The "about_me_summary" field in the state payload should ultimately be built dynamically from the app's actual knowledge base categories/tags (not hardcoded example text). This is a decision to finalize in the next implementation phase.
+
 ## 3. Decision Policy (Pseudocode)
 
 ```javascript
 // Threshold for allowing RAG answer (defined as a named constant, not a magic number)
 const SCOPE_CLASSIFICATION_THRESHOLD = 0.85;
 
-// Assume we have a function to call the Jev model and get results
+// Assume we have a function to call the Jev model and get answers
 async function getJevClassification(userQuestion, aboutMeSummary) {
   const requestPayload = {
     state: {
@@ -81,12 +83,13 @@ async function getJevClassification(userQuestion, aboutMeSummary) {
   };
 
   // In practice, this would be an HTTP call to the Jev API
-  const jevResponse = await callJevApi(requestPayload);
-  return jevResponse.results;
+  const jevApiResponse = await callJevApi(requestPayload);
+  return jevApiResponse.answers;
 }
 
 // Main decision function
 async function handleUserQuestion(userQuestion, aboutMeSummary) {
+  // jevResults is the answers object from the Jev response
   const jevResults = await getJevClassification(userQuestion, aboutMeSummary);
   
   // Extract the noul probability for the is_about_skills question
