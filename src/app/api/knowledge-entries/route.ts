@@ -146,6 +146,7 @@ export async function POST(request: NextRequest) {
 
     // Chunk the content (simple fixed-size chunking ~400 tokens)
     let chunkingSucceeded = false;
+    let chunkingError = null;
     try {
       const chunks = chunkText(content, 400);
       for (let i = 0; i < chunks.length; i++) {
@@ -158,6 +159,7 @@ export async function POST(request: NextRequest) {
       chunkingSucceeded = true;
     } catch (chunkError) {
       console.error('Chunking failed for entry', entry.id, chunkError);
+      chunkingError = String(chunkError);
       // entry still gets saved — chunked stays false, user can retry
     }
 
@@ -172,7 +174,7 @@ export async function POST(request: NextRequest) {
       WHERE id = ${entry.id}
     `;
 
-    return NextResponse.json(updatedEntry, { status: 201 });
+    return NextResponse.json({ ...updatedEntry, chunking_error: chunkingError ?? null }, { status: 201 });
   } catch (error) {
     console.error('Error creating knowledge entry:', error);
     return NextResponse.json(
@@ -246,26 +248,36 @@ export async function PUT(request: NextRequest) {
     }
 
     // Re-chunk and update embeddings if content changed
+    let chunkingSucceeded = false;
+    let chunkingError = null;
     if (content) {
-      // Delete existing chunks
-      await sql`DELETE FROM public.chunks WHERE entry_id = ${id}`;
+      try {
+        // Delete existing chunks
+        await sql`DELETE FROM public.chunks WHERE entry_id = ${id}`;
 
-      // Re-chunk the content
-      const chunks = chunkText(content, 400);
-      
-      for (let i = 0; i < chunks.length; i++) {
-        const embedding = await generateEmbedding(chunks[i]);
+        // Re-chunk the content
+        const chunks = chunkText(content, 400);
         
-        await sql`
-          INSERT INTO public.chunks (entry_id, chunk_text, chunk_index, embedding)
-          VALUES (${id}, ${chunks[i]}, ${i}, ${embedding}::vector)
-        `;
+        for (let i = 0; i < chunks.length; i++) {
+          const embedding = await generateEmbedding(chunks[i]);
+          
+          await sql`
+            INSERT INTO public.chunks (entry_id, chunk_text, chunk_index, embedding)
+            VALUES (${id}, ${chunks[i]}, ${i}, ${embedding}::vector)
+          `;
+        }
+        chunkingSucceeded = true;
+      } catch (err) {
+        console.error('Re-chunking failed for entry', id, err);
+        chunkingError = String(err);
+        chunkingSucceeded = false;
+        // Leave chunked as false (do not set it to true)
       }
       
-      // Ensure chunked flag is true after successful re-chunking
+      // Update chunked flag based on success
       await sql`
         UPDATE public.knowledge_entries
-        SET chunked = true
+        SET chunked = ${chunkingSucceeded}
         WHERE id = ${id}
       `;
     }
@@ -277,7 +289,7 @@ export async function PUT(request: NextRequest) {
       WHERE id = ${id}
     `;
 
-    return NextResponse.json(updatedEntry);
+    return NextResponse.json({ ...updatedEntry, chunking_error: chunkingError ?? null });
   } catch (error) {
     console.error('Error updating knowledge entry:', error);
     return NextResponse.json(
