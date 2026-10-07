@@ -37,26 +37,28 @@ export function ChunkNowButton({ entryId, onChunkSuccess }: ChunkNowButtonProps)
   };
 
   return (
-    <div className="flex items-center space-x-2">
-      {isChunking ? (
-        <Button variant="outline" size="icon" disabled>
-          <Loader2 className="h-4 w-4 animate-spin" />
-        </Button>
-      ) : error ? (
-        <Button variant="outline" size="icon" onClick={() => setError(null)}>
-          <AlertCircle className="h-4 w-4 text-red-500" />
-        </Button>
-      ) : (
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={handleChunkNow}
-          className="hover:bg-accent/50"
-        >
-          <Check className="h-4 w-4" />
-        </Button>
-      )}
-    </div>
-    {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+    <>
+      <div className="flex items-center space-x-2">
+        {isChunking ? (
+          <Button variant="outline" size="icon" disabled>
+            <Loader2 className="h-4 w-4 animate-spin" />
+          </Button>
+        ) : error ? (
+          <Button variant="outline" size="icon" onClick={() => setError(null)}>
+            <AlertCircle className="h-4 w-4 text-red-500" />
+          </Button>
+        ) : (
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handleChunkNow}
+            className="hover:bg-accent/50"
+          >
+            <Check className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
+      {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+    </>
   );
 }
