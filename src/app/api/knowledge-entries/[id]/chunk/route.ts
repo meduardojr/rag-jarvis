@@ -38,6 +38,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Retroactive chunking failed:', error);
-    return NextResponse.json({ error: 'Chunking failed' }, { status: 500 });
+    return NextResponse.json({ error: String(error) }, { status: 500 });
   }
 }
