@@ -48,9 +48,10 @@ This document outlines the planned, in-progress, and completed features for the 
 - 🚧 Retry mechanism for failed chunking from the UI
 - 🚧 Tag management UI enhancements
 - 🚧 History view with model tracking
-- 🚧 File upload ingestion (.md/.pdf)
+- ✅ File upload ingestion (.md/.pdf)
 - 🚧 Export/import knowledge base
 - 🚧 Session expiry + rate limiting
+- 🚧 External API request: allow external websites to make API requests with bearer token + URL referrer validation
 
 
 
