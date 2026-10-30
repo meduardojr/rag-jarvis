@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import {
   Plus,
   Trash2,
@@ -73,6 +73,60 @@ export function AddEntryForm({
   resetForm,
   handleTagInputKeyDown,
 }: AddEntryFormProps) {
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      // Validate file type
+      if (file.type === 'text/plain' || file.name.endsWith('.md') || file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
+        setSelectedFile(file);
+      } else {
+        toast.error('Please upload a .md or .pdf file');
+        e.target.value = ''; // Reset input
+      }
+    }
+  };
+
+  const handleUpload = async () => {
+    if (!selectedFile) {
+      toast.error('Please select a file to upload');
+      return;
+    }
+
+    setIsUploading(true);
+    setTagInput(''); // Clear tag input since we're uploading a file
+
+    try {
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+
+      const response = await fetch('/api/knowledge-entries/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to upload file');
+      }
+
+      const result = await response.json();
+      toast.success(`File uploaded successfully! Entry ID: ${result.id}`);
+      resetForm();
+      setSelectedFile(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to upload file');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="space-y-3">
@@ -80,7 +134,7 @@ export function AddEntryForm({
           Add Knowledge Entry
         </h2>
         <p className="text-sm text-muted-foreground">
-          Capture your technical knowledge, preferences, and conventions
+          Capture your technical knowledge, preferences, conventions, etc.
         </p>
         {!isPasswordVerified && (
           <div className="flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
@@ -165,39 +219,65 @@ export function AddEntryForm({
           )}
         </div>
 
-        <div className="flex items-center gap-3">
-          <Button
-            variant="outline"
-            onClick={() => {
-              toast.info('File upload feature coming soon!');
-            }}
-            className="glass-panel-hover"
-          >
-            <Upload className="h-4 w-4 mr-2" /> Upload File
-          </Button>
+        <div className="space-y-3">
+          <div className="flex items-center gap-3">
+            <input
+              type="file"
+              accept=".md,.pdf,text/plain"
+              onChange={handleFileChange}
+              ref={fileInputRef}
+              className="hidden"
+              disabled={isAdding || isUploading}
+            />
+            <Button
+              variant="outline"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isAdding || isUploading || !isPasswordVerified}
+              className="glass-panel-hover"
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              Upload File
+            </Button>
 
-          <Button
-            onClick={handleAddEntry}
-            disabled={isAdding || !isPasswordVerified}
-            className="flex-1 ai-primary"
-          >
-            {isAdding ? (
-              <>
-                <Check className="h-4 w-4 mr-2 animate-spin" />
-                Adding...
-              </>
-            ) : !isPasswordVerified ? (
-              <>
-                <Lock className="h-4 w-4 mr-2" />
-                Password Required
-              </>
-            ) : (
-              <>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Entry
-              </>
-            )}
-          </Button>
+            <Button
+              onClick={handleAddEntry}
+              disabled={isAdding || !isPasswordVerified}
+              className="flex-1 ai-primary"
+            >
+              {isAdding ? (
+                <>
+                  <Check className="h-4 w-4 mr-2 animate-spin" />
+                  Adding...
+                </>
+              ) : !isPasswordVerified ? (
+                <>
+                  <Lock className="h-4 w-4 mr-2" />
+                  Password Required
+                </>
+              ) : (
+                <>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Entry
+                </>
+              )}
+            </Button>
+          </div>
+
+          {selectedFile && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <FileText className="h-4 w-4" />
+              <span>Selected: {selectedFile.name}</span>
+              <Button
+                variant="link"
+                size="sm"
+                onClick={handleUpload}
+                disabled={isUploading}
+                className="ml-auto"
+              >
+                {isUploading ? 'Uploading...' : 'Upload'}
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </div>
