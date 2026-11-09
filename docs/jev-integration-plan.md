@@ -1,26 +1,20 @@
 # Jev Integration Plan for Scope Classification
 
-This document outlines the plan to replace the existing lightweight LLM-based scope classification step with a TypeSafe Jev model for determining whether a user question is about the author's skills, knowledge, or work.
+This document outlines the plan to replace the existing lightweight LLM-based scope classification step with a TypeSafe Jev model for determining whether a user question is about the author's technical work.
 
 ## 1. Minimal Jev Question Schema
 
-We propose two questions for the Jev model:
+We propose one question for the Jev model:
 
-### Question 1: `is_about_skills` (noul - yes/no probability)
+### Question 1: `is_relevant_topic` (noul - yes/no probability)
 - **Type**: `noul`
-- **Instructions**: "Is this question asking about the author's own technical stack, skills, past projects, tools, or what they personally know/do?"
+- **Question ID**: `is_relevant_topic`
+- **Instructions**: "Is this question asking for advice, explanation, comparison, or help about software development, architecture, tooling, deployment, or the author's own technical skills, projects, and experience?"
 - **Criteria**:
-  - **true**: The question is about the author's personal technical stack, skills, past projects, tools, or what they personally know/do (e.g., "What is your experience with React?", "Which projects did you build using Node.js?", "How do you approach debugging in Python?").
-  - **false**: The question is not about the author's personal technical stack, skills, past projects, tools, or what they personally know/do. It might be about general knowledge, other people, opinions, or unrelated topics (e.g., "What is the capital of France?", "Explain quantum entanglement", "What do you think about climate change?").
+  - **true**: The question is about software development, architecture, tooling, deployment, or the author's own technical work and experience.
+  - **false**: The question is unrelated to those, e.g. general trivia, small talk, politics, or other non-technical topics.
 
-### Question 2: `relevance_score` (score - optional)
-- **Type**: `score`
-- **Instructions**: "How relevant is the question to the author's skills, knowledge, or work?"
-- **Criteria** (ordered from least to most relevant):
-  - `["Unrelated", "Loosely related", "Directly about my skills/work"]`
-  - **Unrelated**: The question has no connection to the author's skills, knowledge, or work.
-  - **Loosely related**: The question is tangentially related (e.g., about a technology the author has used but not in depth, or about a general topic the author might have an opinion on).
-  - **Directly about my skills/work**: The question is explicitly about the author's specific skills, projects, tools, or personal knowledge.
+> **Note**: The `relevance_score` question has been removed. The primary decision is based solely on the `is_relevant_topic` noul question.
 
 ## 2. Example Jev Request Payload
 
@@ -32,18 +26,13 @@ We propose two questions for the Jev model:
   },
   "model": "jev-latest",
   "questions": {
-    "is_about_skills": {
+    "is_relevant_topic": {
       "type": "noul",
-      "instructions": "Is this question asking about the author's own technical stack, skills, past projects, tools, or what they personally know/do?",
+      "instructions": "Is this question asking for advice, explanation, comparison, or help about software development, architecture, tooling, deployment, or the author's own technical skills, projects, and experience?",
       "criteria": {
-        "true": "The question is about the author's personal technical stack, skills, past projects, tools, or what they personally know/do.",
-        "false": "The question is not about the author's personal technical stack, skills, past projects, tools, or what they personally know/do. It might be about general knowledge, other people, or unrelated topics."
+        "true": "The question is about software development, architecture, tooling, deployment, or the author's own technical work and experience.",
+        "false": "The question is unrelated to those, e.g. general trivia, small talk, politics, or other non-technical topics."
       }
-    },
-    "relevance_score": {
-      "type": "score",
-      "instructions": "How relevant is the question to the author's skills, knowledge, or work?",
-      "criteria": ["Unrelated", "Loosely related", "Directly about my skills/work"]
     }
   }
 }
@@ -66,18 +55,13 @@ async function getJevClassification(userQuestion, aboutMeSummary) {
     },
     model: "jev-latest",
     questions: {
-      is_about_skills: {
+      is_relevant_topic: {
         type: "noul",
-        instructions: "Is this question asking about the author's own technical stack, skills, past projects, tools, or what they personally know/do?",
+        instructions: "Is this question asking for advice, explanation, comparison, or help about software development, architecture, tooling, deployment, or the author's own technical skills, projects, and experience?",
         criteria: {
-          true: "The question is about the author's personal technical stack, skills, past projects, tools, or what they personally know/do.",
-          false: "The question is not about the author's personal technical stack, skills, past projects, tools, or what they personally know/do. It might be about general knowledge, other people, or unrelated topics."
+          true: "The question is about software development, architecture, tooling, deployment, or the author's own technical work and experience.",
+          false: "The question is unrelated to those, e.g. general trivia, small talk, politics, or other non-technical topics."
         }
-      },
-      relevance_score: {
-        type: "score",
-        instructions: "How relevant is the question to the author's skills, knowledge, or work?",
-        criteria: ["Unrelated", "Loosely related", "Directly about my skills/work"]
       }
     }
   };
@@ -92,12 +76,12 @@ async function handleUserQuestion(userQuestion, aboutMeSummary) {
   // jevResults is the answers object from the Jev response
   const jevResults = await getJevClassification(userQuestion, aboutMeSummary);
   
-  // Extract the noul probability for the is_about_skills question
-  const isAboutSkillsProbability = jevResults.is_about_skills.noul;
+  // Extract the noul probability for the is_relevant_topic question
+  const isRelevantProbability = jevResults.is_relevant_topic.noul;
   
   // Decision policy: allow RAG answer only if probability meets or exceeds threshold
-  if (isAboutSkillsProbability >= SCOPE_CLASSIFICATION_THRESHOLD) {
-    // Proceed with RAG-based answer generation
+  if (isRelevantProbability >= SCOPE_CLASSIFICATION_THRESHOLD) {
+    // Proceed with RAG answer generation
     const ragAnswer = await generateRagAnswer(userQuestion);
     return ragAnswer;
   } else {
@@ -117,7 +101,7 @@ function getFallbackResponse() {
 ```
 
 ## Notes
-- The `is_about_skills` noul question returns a probability between 0 and 1, representing the model's confidence that the question is about the author's skills.
+- The `is_relevant_topic` noul question returns a probability between 0 and 1, representing the model's confidence that the question is about the author's technical work.
 - The threshold of 0.85 is chosen to ensure high precision in allowing RAG answers, minimizing false positives.
-- The `relevance_score` question is optional and can be used for additional filtering or logging if needed, but the primary decision is based on the noul question.
+- The `relevance_score` question has been removed. The primary decision is based solely on the `is_relevant_topic` noul question.
 - This plan assumes the existing fallback mechanism and RAG answer generation remain unchanged; only the scope classification step is replaced.

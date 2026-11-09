@@ -1,12 +1,12 @@
 # JARVIS - Personal Knowledge RAG Assistant
 
-A web-based application that ingests your personal technical knowledge base and uses Retrieval-Augmented Generation (RAG) to generate ready-to-use AI prompts grounded in your real preferences and standards.
+A web-based application that ingests your personal technical knowledge base and uses Retrieval-Augmented Generation (RAG) to power a **Chat Consultant** that answers technical questions and gives advice grounded in your documented stack, skills, and experience.
 
 ## Overview
 
-When using AI coding tools, you repeatedly re-explain your stack, conventions, and architectural preferences. JARVIS externalizes this knowledge once into a searchable base, then auto-injects relevant parts into any prompt generation request.
+When using AI coding tools, you repeatedly re-explain your stack, conventions, and architectural preferences. JARVIS externalizes this knowledge once into a searchable base, then retrieves relevant parts to answer questions about your technical work.
 
-> "Generate an AI prompt for a REST API spec using my usual stack" → JARVIS retrieves your documented preferences (e.g., "I use FastAPI + Postgres + repository pattern") and produces a tailored prompt.
+> "What's my preferred backend stack?" → JARVIS retrieves your documented preferences (e.g., "I use FastAPI + Postgres + repository pattern") and answers with citations.
 
 ## Features
 
@@ -25,56 +25,43 @@ When using AI coding tools, you repeatedly re-explain your stack, conventions, a
 - ✅ Metadata: source title, tag, date added
 - ✅ Similarity search for retrieval
 
-### 1.3 Chat / Ask Interface
-- ✅ Natural language questions
-- ✅ **Prompt-generation mode** - generates structured, tool-ready prompts
-- ✅ Shows retrieved knowledge chunks for transparency
+### 1.3 Chat Consultant
+- ✅ Natural language questions about software, architecture, tooling, and deployment
+- ✅ Answers grounded in the knowledge base via RAG with similarity search
+- ✅ Opens with a "not covered in your knowledge base" notice when nothing relevant is retrieved
+- ✅ Declines unrelated questions through the Jev scope gate (threshold 0.85)
+- ✅ Owner vs. visitor recognition via existing password session (jarvis-session cookie)
+- ✅ In-content redaction notes using `REDACTION:` convention for visitor-specific filtering
+- ✅ Source titles shown to the owner only
+- ✅ Full question logging to `about_me_chat_log` table (question, scope, answer, owner status, timestamp)
+- ✅ Each question is answered independently (no multi-turn memory yet)
 
-### 1.4 Prompt Templates
-- ✅ Claude-style (detailed, XML-tagged)
-- ✅ Bolt/v0-style (concise, UI-focused)
-- ✅ Cursor/Copilot-style (code-context focused)
-- ✅ General AI template
-
-### 1.5 History
-- ✅ Save past generated prompts
-- ✅ View, copy, regenerate with tweaks
-- ✅ Model used tracking for traceability
-
-### 1.6 Out-of-Scope Detection
+### 1.4 Out-of-Scope Detection
 - ✅ Similarity-score threshold on retrieval
 - ✅ Clear messaging when topic not in knowledge base
 - ✅ Suggestions to add relevant notes
 
-### 1.7 Selectable LLM Model
+### 1.5 Selectable LLM Model
 - ✅ User-selectable per request or default in settings
 - ✅ Free tier: Gemini Flash, Groq-hosted models
 - ✅ Paid tier: Claude, GPT, DeepSeek, Qwen
 - ✅ Separate selection for embeddings vs generation
 
-### 1.8 Password Protection
+### 1.6 Password Protection
 - ✅ Password gate for adding/editing knowledge entries
 - ✅ Password gate for paid model usage
 - ✅ Session-based verification (30-min timeout, configurable)
 - ✅ Rate limiting on password attempts (5 attempts = cooldown)
 - ✅ Password hash stored (bcrypt compatible)
 
-### 1.9 Branching Decision Scoring
+### 1.7 Branching Decision Scoring
 - ✅ Log preference choices per category
 - ✅ Score based on frequency + recency (decay function)
 - ✅ Auto-pick when threshold exceeded (90% + min sample)
 - ✅ Demoted options shown as alternatives
 - ✅ Configurable threshold and sample size
 
-### 1.10 About Me Chat
-- ✅ Constrained Q&A mode scoped to questions about the user's own knowledge base
-- ✅ Two-step pipeline: lightweight classification (in-scope/out-of-scope) then grounded answer generation
-- ✅ Automatic scope rejection for unrelated questions with configurable message
-- ✅ Owner vs. visitor recognition via existing password session (jarvis-session cookie)
-- ✅ In-content redaction notes using `REDACTION:` convention for visitor-specific filtering
-- ✅ Full question logging to `about_me_chat_log` table (question, scope, answer, owner status, timestamp)
-
-### 1.11 Knowledge Base Viewing (Password‑Gated & Paginated)
+### 1.8 Knowledge Base Viewing (Password‑Gated & Paginated)
 - ✅ Password required to view actual entry content (title, content, tags)
 - ✅ When unverified, API returns placeholder data (masked title, empty content/tags) to prevent leakage via network/DOM
 - ✅ Owner/visitor recognition via existing password session (same jarvis‑session cookie)
@@ -118,6 +105,9 @@ OPENAI_API_KEY=sk-...
 GEMINI_API_KEY=...
 ANTHROPIC_API_KEY=...
 GROQ_API_KEY=...
+
+# Required: TypeSafe Jev for scope classification
+TYPESAFE_API_KEY=...
 ```
 
 ### Installation
@@ -152,32 +142,16 @@ On first run, JARVIS will automatically create the required tables:
 | PUT | `/api/knowledge-entries?id=xxx` | Update entry |
 | DELETE | `/api/knowledge-entries?id=xxx` | Delete entry |
 
-### Chat / Prompt Generation
+### Chat Consultant
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/chat` | Generate AI prompt with RAG |
+| POST | `/api/consultant-chat` | Answer a technical question grounded in the knowledge base via RAG |
 
 Request body:
 ```json
 {
-  "query": "Create a REST API for user auth",
-  "target_tool": "claude",
-  "model": "gemini-2.0-flash"
-}
-```
-
-### About Me Chat
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/about-me-chat` | Ask a question about the user's knowledge base (stack, skills, projects) |
-
-Request body:
-```json
-{
-  "question": "What is my preferred backend stack?",
-  "model": "gemini-2.0-flash" // optional, defaults to gemini-2.0-flash
+  "question": "What is my preferred backend stack?"
 }
 ```
 
@@ -186,18 +160,29 @@ Response body (in-scope):
 {
   "answer": "Based on your knowledge base, I prefer using FastAPI with Postgres...",
   "in_scope": true,
-  "is_owner": true
+  "is_owner": true,
+  "grounded": true,
+  "sources": ["FastAPI + Postgres"]
 }
 ```
 
 Response body (out-of-scope):
 ```json
 {
-  "answer": "I'm designed to answer questions about your technical knowledge base, skills, past projects, and what you know/do. Please ask a question related to your own expertise.",
+  "answer": "This assistant only helps with software, architecture, tooling, and questions about the author's technical work. Please ask a question related to those topics.",
   "in_scope": false,
-  "is_owner": false
+  "is_owner": true,
+  "grounded": false
 }
 ```
+
+### History
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/generated-prompts` | List history — **retained but not used by the UI** |
+| POST | `/api/generated-prompts` | Save prompt — **retained but not used by the UI** |
+| DELETE | `/api/generated-prompts` | Clear history — **retained but not used by the UI** |
 
 ### Authentication
 
@@ -221,14 +206,6 @@ Response body (out-of-scope):
 | GET | `/api/preferences` | Get preference scores |
 | POST | `/api/preferences` | Log a choice |
 
-### History
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/generated-prompts` | List history |
-| POST | `/api/generated-prompts` | Save prompt |
-| DELETE | `/api/generated-prompts` | Clear history |
-
 ## Password Protection
 
 JARVIS uses two-tier password protection:
@@ -243,8 +220,8 @@ Free tier models (Gemini Flash, Groq Llama) work without password verification.
 
 | Goal | Target |
 |------|--------|
-| Time to generate prompt | < 30 seconds |
-| Prompt acceptance rate | > 80% |
+| Time to answer question | < 30 seconds |
+| Answer relevance rate | > 80% |
 | Retrieval accuracy | > 90% (spot-check) |
 
 ## Security Notes

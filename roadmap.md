@@ -27,28 +27,30 @@ This document outlines the planned, in-progress, and completed features for the 
     - `POST /api/knowledge-entries/chunk-all` (bulk chunk unchunked entries)
 - ✅ Neon setup with pgvector, embedding pipeline
 - ✅ Basic ask/answer using free-tier model
-- ✅ Target-tool templates (Claude / Bolt / Cursor)
-- ✅ Structured prompt output mode
-- ✅ Paid model options + password gate
-- ✅ Retrieved sources display
 - ✅ Pagination and search/filtering for knowledge entries list
 - ✅ Password‑gated knowledge base viewing with pagination, tabs, and placeholder data for unverified sessions
 - ✅ Root cause of embedding pipeline failure identified: missing/inactive RAG API key
 - ✅ Localized loading/error states — each section manages its own loading/error independently (no shared state across sections)
-- ✅ Merged hero + "AI-powered prompt assistant" intro section, with tabbed interface (About Me Chat / Generate AI Prompt) below it
 - ✅ Inline knowledge entry editing (edit directly in the list, not via the add-entry form)
-- ✅ Agent + model selection for Generate AI Prompt (pick agent first, then a model valid for that agent)
 - ✅ Desktop layout fixes (side-by-side hero/intro, square aspect ratio, tag contrast, general max-width/grid cleanup)
-- ✅ About Me Chat: constrained Q&A mode scoped to user's knowledge base with owner recognition, in-content redaction notes (REDACTION: convention), and full question logging
 - ✅ Frontend: "Chunk Now" (single) + "Chunk All" (bulk) buttons wired to existing endpoints, with chunking status badge
-- ✅ Jev-based scope classification for About Me Chat (guardrail swap complete, shadow-mode logic removed, single classification call confirmed via code review — live request testing not yet performed)
 - ✅ Improved error reporting for chunking/embedding failures
 
+## Superseded
+- ✅ Target-tool templates (Claude / Bolt / Cursor) — replaced by Chat Consultant
+- ✅ Structured prompt output mode — replaced by Chat Consultant
+- ✅ Paid model options + password gate — model selection removed; password gate retained for knowledge writes
+- ✅ Retrieved sources display — carried over to Chat Consultant (owner-only)
+- ✅ Agent + model selection for Generate AI Prompt — removed; can be reattached from git history
+- ✅ History view with model tracking — removed; prompt history API retained but unused by UI
+- ✅ About Me Chat: constrained Q&A mode scoped to user's knowledge base with owner recognition, in-content redaction notes (REDACTION: convention), and full question logging — carried over to Chat Consultant
+- ✅ Merged hero + "AI-powered prompt assistant" intro section, with tabbed interface (About Me Chat / Generate AI Prompt) — replaced by Chat Consultant section
+- ✅ Jev-based scope classification for About Me Chat — carried over to Chat Consultant (question id: is_relevant_topic, threshold 0.85, relevance_score removed)
+
 ## In Progress
+- ✅ File upload ingestion (.md/.pdf)
 - 🚧 Retry mechanism for failed chunking from the UI
 - 🚧 Tag management UI enhancements
-- 🚧 History view with model tracking
-- ✅ File upload ingestion (.md/.pdf)
 - 🚧 Export/import knowledge base
 - 🚧 Session expiry + rate limiting
 - 🚧 External API request: allow external websites to make API requests with bearer token + URL referrer validation
