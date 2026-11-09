@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { AlertCircle, RefreshCw, Database } from 'lucide-react';
 
@@ -8,8 +7,7 @@ import { JarvisLogo } from '@/components/ui/jarvis-logo';
 import { HeroIllustration } from '@/components/ui/hero-illustration';
 import { KnowledgeInput } from '@/components/knowledge-input';
 import { SettingsPanel } from '@/components/settings-panel';
-import { AboutMeChat } from '@/components/about-me-chat';
-import { PromptGeneratorTab } from '@/components/prompt-generator-tab';
+import { ConsultantChat } from '@/components/consultant-chat';
 import { Button } from '@/components/ui/button';
 
 const fadeIn = {
@@ -18,8 +16,6 @@ const fadeIn = {
 };
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<'about-me' | 'prompt-generator'>('about-me');
-
   return (
     <div className="min-h-screen relative overflow-x-hidden">
       {/* Background gradient orbs */}
@@ -65,12 +61,12 @@ export default function Home() {
               <div className="flex-1 lg:w-1/2">
                 <div className="glass-panel ai-primary p-6 rounded-2xl">
                   <h2 className="text-lg font-semibold mb-2">
-                    Your AI-Powered Prompt Assistant
+                    Your AI-Powered Technical Consultant
                   </h2>
                   <p className="text-sm text-muted-foreground leading-relaxed">
-                    Build your personal knowledge base, then generate tailored AI
-                    prompts grounded in your real preferences and conventions —
-                    ready to paste into Claude, Bolt, Cursor, v0, and more.
+                    Ask questions about software development, architecture,
+                    tooling, or deployment, and get answers grounded in your
+                    personal knowledge base.
                   </p>
                   <div className="mt-4 flex flex-wrap gap-2">
                     <span className="text-xs px-2 py-1 rounded-full bg-indigo-500/20 text-indigo-600 border border-indigo-500/30">
@@ -92,40 +88,14 @@ export default function Home() {
           </div>
         </motion.div>
 
-        {/* Tabbed Section */}
+        {/* Chat Consultant Section */}
         <motion.div
           {...fadeIn}
           transition={{ duration: 0.6, delay: 0.2 }}
           className="mb-8 lg:mb-12"
         >
-          {/* Tab Buttons */}
-          <div className="flex border-b border-muted/50 mb-4">
-            <button
-              onClick={() => setActiveTab('about-me')}
-              className={`flex-1 px-4 py-2 text-sm font-medium
-                ${activeTab === 'about-me' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-muted-foreground/80'}`}
-            >
-              About Me Chat
-            </button>
-            <button
-              onClick={() => setActiveTab('prompt-generator')}
-              className={`flex-1 px-4 py-2 text-sm font-medium
-                ${activeTab === 'prompt-generator' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-muted-foreground/80'}`}
-            >
-              Generate AI Prompt
-            </button>
-          </div>
-
-          {/* Tab Content */}
           <div className="mx-auto max-w-6xl">
-            <div className="space-y-6">
-              <div hidden={activeTab !== 'about-me'}>
-                <AboutMeChat />
-              </div>
-              <div hidden={activeTab !== 'prompt-generator'}>
-                <PromptGeneratorTab />
-              </div>
-            </div>
+            <ConsultantChat />
           </div>
         </motion.div>
 
