@@ -1,7 +1,8 @@
 'use client';
 
-import { Bot, User } from 'lucide-react';
+import { Bot, User, RefreshCw } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
 // A single message in the Chat Consultant conversation.
 export function ConsultantMessage({
@@ -10,12 +11,16 @@ export function ConsultantMessage({
   inScope,
   grounded,
   sources,
+  error,
+  onRetry,
 }: {
   role: 'user' | 'assistant';
   content: string;
   inScope?: boolean;
   grounded?: boolean;
   sources?: string[];
+  error?: boolean;
+  onRetry?: () => void;
 }) {
   const isUser = role === 'user';
 
@@ -40,6 +45,8 @@ export function ConsultantMessage({
         className={`max-w-[85%] sm:max-w-[75%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
           isUser
             ? 'bg-primary text-primary-foreground'
+            : error
+            ? 'bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-300'
             : 'glass-panel border border-muted/50'
         }`}
       >
@@ -58,6 +65,17 @@ export function ConsultantMessage({
           <p className="mt-2 text-xs text-muted-foreground">
             Sources: {sources.join(', ')}
           </p>
+        )}
+
+        {error && onRetry && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onRetry}
+            className="mt-2 h-7 px-2 text-xs"
+          >
+            <RefreshCw className="h-3 w-3 mr-1" /> Retry
+          </Button>
         )}
       </div>
     </div>

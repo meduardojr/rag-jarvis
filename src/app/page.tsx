@@ -73,8 +73,8 @@ export default function Home() {
                       🔍 RAG-powered
                     </span>
                     <span className="text-xs px-2 py-1 rounded-full bg-purple-500/20 text-purple-600 border border-purple-500/30">
-                      🎯 Tool-specific
-                    </span>
+                                          🎯 Stack-aware
+                                        </span>
                     <span className="text-xs px-2 py-1 rounded-full bg-pink-500/20 text-pink-600 border border-pink-500/30">
                       🔐 Password-gated
                     </span>

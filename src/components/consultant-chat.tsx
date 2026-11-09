@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Send, AlertCircle, Bot, MessageSquare } from 'lucide-react';
-import { toast } from 'sonner';
+import { Send, Bot, MessageSquare, Loader2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,41 +15,44 @@ type Message = {
   inScope?: boolean;
   grounded?: boolean;
   sources?: string[];
+  error?: boolean;
 };
 
 export function ConsultantChat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesListRef = useRef<HTMLDivElement>(null);
 
-  // Scroll to bottom when messages change
+  // Scroll to bottom of the message list when messages change
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    if (messagesListRef.current) {
+      messagesListRef.current.scrollTop = messagesListRef.current.scrollHeight;
+    }
+  }, [messages, isLoading]);
 
-  const handleSend = async () => {
-    if (!input.trim()) return;
+  const handleSend = async (question?: string) => {
+    const trimmedQuestion = (question ?? input).trim();
+    if (!trimmedQuestion) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
-      content: input,
+      content: trimmedQuestion,
     };
 
     setMessages((prev) => [...prev, userMessage]);
     setInput('');
-    setIsLoading(true);
-    setError(null);
 
     try {
+      setIsLoading(true);
+
       const response = await fetch('/api/consultant-chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ question: input }),
+        body: JSON.stringify({ question: trimmedQuestion }),
       });
 
       if (!response.ok) {
@@ -72,8 +74,6 @@ export function ConsultantChat() {
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      setError(errorMessage);
-      toast.error(errorMessage);
 
       // Add error message to conversation
       const errorAssistantMessage: Message = {
@@ -82,22 +82,29 @@ export function ConsultantChat() {
         content: `Error: ${errorMessage}. Please try again.`,
         inScope: false,
         grounded: false,
+        error: true,
       };
       setMessages((prev) => [...prev, errorAssistantMessage]);
     } finally {
       setIsLoading(false);
     }
   };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  };
+  
+    const handleRetry = () => {
+        const lastUserMessage = [...messages].reverse().find((m) => m.role === 'user');
+        if (!lastUserMessage) return;
+        handleSend(lastUserMessage.content);
+      };
+    
+      const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          handleSend();
+        }
+      };
 
   return (
-    <div className="flex h-full min-h-[500px] flex-col rounded-2xl border border-muted/50 bg-background shadow-lg">
+      <div className="flex h-[600px] max-h-[75vh] flex-col rounded-2xl border border-muted/50 bg-background shadow-lg">
       {/* Header */}
       <div className="border-b border-muted/50 bg-muted/20 px-4 py-3">
         <div className="flex items-center gap-2">
@@ -107,7 +114,7 @@ export function ConsultantChat() {
       </div>
 
       {/* Messages area */}
-      <div className="flex-1 overflow-y-auto px-4 py-4">
+      <div ref={messagesListRef} className="flex-1 overflow-y-auto px-4 py-4">
         {messages.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center text-center text-muted-foreground">
             <MessageSquare className="mb-3 h-12 w-12 opacity-50" />
@@ -126,36 +133,19 @@ export function ConsultantChat() {
                 inScope={msg.inScope}
                 grounded={msg.grounded}
                 sources={msg.sources}
+                error={msg.error}
+                onRetry={msg.error ? handleRetry : undefined}
               />
             ))}
             {isLoading && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Bot className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin" />
                 <span>Thinking...</span>
               </div>
             )}
-            <div ref={messagesEndRef} />
           </div>
         )}
       </div>
-
-      {/* Error display */}
-      {error && (
-        <div className="border-t border-muted/50 bg-red-500/10 px-4 py-2">
-          <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
-            <AlertCircle className="h-4 w-4" />
-            <span>{error}</span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setError(null)}
-              className="ml-auto h-6 px-2 text-xs"
-            >
-              Dismiss
-            </Button>
-          </div>
-        </div>
-      )}
 
       {/* Input area */}
       <div className="border-t border-muted/50 bg-muted/20 p-4">
@@ -169,7 +159,7 @@ export function ConsultantChat() {
             className="flex-1 glass-panel-hover"
           />
           <Button
-            onClick={handleSend}
+            onClick={() => handleSend()}
             disabled={isLoading || !input.trim()}
             className="ai-primary"
           >
