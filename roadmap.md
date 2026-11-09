@@ -52,7 +52,7 @@ This document outlines the planned, in-progress, and completed features for the 
 - 🚧 Export/import knowledge base
 - 🚧 Session expiry + rate limiting
 - 🚧 External API request: allow external websites to make API requests with bearer token + URL referrer validation
-- 🚧 Chat Consultant — Phase 2: UI swap
+- 🚧 Chat Consultant — Phase 3: dead code removed
 
 ## Upcoming
 - 🔜 Version history for knowledge entries
