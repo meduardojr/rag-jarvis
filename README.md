@@ -37,12 +37,11 @@ When using AI coding tools, you repeatedly re-explain your stack, conventions, a
 - ✅ Each question is answered independently (no multi-turn memory yet)
 
 ### 1.4 Out-of-Scope Detection
-- ✅ Similarity-score threshold on retrieval
-- ✅ Clear messaging when topic not in knowledge base
-- ✅ When topic is not found, a notice is shown: "This assistant only helps with software, architecture, tooling, and questions about the author's technical work. Please ask a question related to those topics."
+- ✅ If retrieval finds nothing relevant, the answer opens with a notice that the topic isn't covered by your knowledge base, followed by general advice
+- ✅ Questions the Jev gate rejects get the fixed decline message
 
 ### 1.5 Password Protection
-- ✅ Password gate for adding/editing knowledge entries
+- ✅ Knowledge Base Writes: Adding, editing, or deleting entries requires password verification
 - ✅ Session-based verification (30-min timeout, configurable)
 - ✅ Rate limiting on password attempts (5 attempts = cooldown)
 - ✅ Password hash stored (bcrypt compatible)
@@ -84,7 +83,7 @@ Knowledge Base Reads: Viewing the knowledge base list (GET /api/knowledge-entrie
 
 - Node.js 18+
 - Neon account with pgvector extension enabled
-- API keys for LLM providers (optional for basic usage)
+- OpenAI and TypeSafe API keys
 
 ### Environment Variables
 
@@ -94,13 +93,8 @@ Create a `.env.local` file with:
 # Database (from Neon Console)
 DATABASE_URL=postgresql://user:pass@host/dbname?sslmode=require
 
-# Optional: OpenAI for embeddings (required for RAG)
+# Required: OpenAI for embeddings and consultant answers
 OPENAI_API_KEY=sk-...
-
-# Optional: LLM Provider API Keys
-GEMINI_API_KEY=...
-ANTHROPIC_API_KEY=...
-GROQ_API_KEY=...
 
 # Required: TypeSafe Jev for scope classification
 TYPESAFE_API_KEY=...
