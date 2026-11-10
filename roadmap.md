@@ -10,6 +10,7 @@ This document outlines the planned, in-progress, and completed features for the 
 - 🔜 Upcoming
 
 ## Completed
+- ✅ File upload ingestion (.md/.pdf)
 - ✅ Core knowledge entry CRUD operations (create, read, update, delete)
 - ✅ Password protection and verification
 - ✅ Automatic chunking and embedding generation for knowledge entries
@@ -42,13 +43,12 @@ This document outlines the planned, in-progress, and completed features for the 
 - ✅ Paid model options + password gate — model selection removed; password gate retained for knowledge writes
 - ✅ Retrieved sources display — carried over to Chat Consultant (owner-only)
 - ✅ Agent + model selection for Generate AI Prompt — removed; can be reattached from git history
-- ✅ History view with model tracking — removed; prompt history API retained but unused by UI
+- History view with model tracking — dropped, never completed; prompt history API retained but unused by UI
 - ✅ About Me Chat: constrained Q&A mode scoped to user's knowledge base with owner recognition, in-content redaction notes (REDACTION: convention), and full question logging — carried over to Chat Consultant
 - ✅ Merged hero + "AI-powered prompt assistant" intro section, with tabbed interface (About Me Chat / Generate AI Prompt) — replaced by Chat Consultant section
 - ✅ Jev-based scope classification for About Me Chat — carried over to Chat Consultant (question id: is_relevant_topic, threshold 0.85, relevance_score removed)
 
 ## In Progress
-- ✅ File upload ingestion (.md/.pdf)
 - 🚧 Retry mechanism for failed chunking from the UI
 - 🚧 Tag management UI enhancements
 - 🚧 Export/import knowledge base
