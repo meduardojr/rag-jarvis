@@ -12,7 +12,7 @@ When using AI coding tools, you repeatedly re-explain your stack, conventions, a
 
 ### 1.1 Knowledge Base Ingestion
 - ✅ Manual text entry (title + content + tags)
-- ✅ File upload (`.md`, `.pdf`) — supported via `/api/knowledge-entries/upload`
+- ✅ File upload (`.md`, `.txt`, `.pdf`) - coming soon
 - ✅ Paste-in quick capture
 - ✅ Categories: Stack, Architecture Pattern, Convention, Anti-pattern/Avoid, Tooling, Project-specific
 - ✅ Edit/delete entries
@@ -39,23 +39,27 @@ When using AI coding tools, you repeatedly re-explain your stack, conventions, a
 ### 1.4 Out-of-Scope Detection
 - ✅ Similarity-score threshold on retrieval
 - ✅ Clear messaging when topic not in knowledge base
-- ✅ When topic is not found, a notice is shown: "This assistant only helps with software, architecture, tooling, and questions about the author's technical work. Please ask a question related to those topics."
+- ✅ Suggestions to add relevant notes
+
+### 1.5 Selectable LLM Model
+- ✅ User-selectable per request or default in settings
+- ✅ Free tier: Gemini Flash, Groq-hosted models
+- ✅ Paid tier: Claude, GPT, DeepSeek, Qwen
+- ✅ Separate selection for embeddings vs generation
 
 ### 1.6 Password Protection
 - ✅ Password gate for adding/editing knowledge entries
+- ✅ Password gate for paid model usage
 - ✅ Session-based verification (30-min timeout, configurable)
 - ✅ Rate limiting on password attempts (5 attempts = cooldown)
 - ✅ Password hash stored (bcrypt compatible)
 
-Knowledge Base Reads: Viewing the knowledge base list (GET /api/knowledge-entries) requires password verification to see real content; unverified sessions receive only placeholder data.
-
-### 1.6 Branching Decision Scoring
+### 1.7 Branching Decision Scoring
 - ✅ Log preference choices per category
 - ✅ Score based on frequency + recency (decay function)
 - ✅ Auto-pick when threshold exceeded (90% + min sample)
 - ✅ Demoted options shown as alternatives
 - ✅ Configurable threshold and sample size
-- ⚠️ **Backend only — not used by the UI**: preference scores are stored via `/api/preferences` but no component reads or displays them
 
 ### 1.8 Knowledge Base Viewing (Password‑Gated & Paginated)
 - ✅ Password required to view actual entry content (title, content, tags)
