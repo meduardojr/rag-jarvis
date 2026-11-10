@@ -7,9 +7,9 @@ import { Toaster } from 'sonner';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'JARVIS - Personal Knowledge RAG Assistant',
+  title: 'JARVIS - Knowledge-Grounded Technical Consultant',
   description:
-    'Generate AI prompts grounded in your personal technical knowledge base',
+    'A technical consultant grounded in your personal knowledge base for software, architecture, and tooling advice',
 };
 
 export default function RootLayout({

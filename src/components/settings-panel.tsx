@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import {
   Lock,
-  Bot,
   Download,
   Upload,
   RotateCcw,
@@ -19,37 +18,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
-import { Badge } from '@/components/ui/badge';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { useJarvis } from '@/lib/jarvis-provider';
-
-const MODELS = [
-  { id: 'gemini-flash', name: 'Gemini Flash', tier: 'free' },
-  { id: 'groq-llama3', name: 'Groq Llama3 70B', tier: 'free' },
-  { id: 'groq-mixtral', name: 'Groq Mixtral 8x7B', tier: 'free' },
-  { id: 'claude-3-5-sonnet', name: 'Claude 3.5 Sonnet', tier: 'paid' },
-  { id: 'gpt-4o', name: 'GPT-4o', tier: 'paid' },
-  { id: 'deepseek-chat', name: 'DeepSeek Chat', tier: 'paid' },
-  { id: 'qwen-flash', name: 'Qwen Flash', tier: 'paid' },
-] as const;
 
 export function SettingsPanel() {
   const { theme, setTheme, verifyPassword, isPasswordVerified, logout } = useJarvis();
   const [password, setPassword] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
-  const [defaultModel, setDefaultModel] = useState('gemini-flash');
   const [autoPickThreshold, setAutoPickThreshold] = useState(90);
   const [minSampleSize, setMinSampleSize] = useState([5]);
   const [sessionTimeout, setSessionTimeout] = useState(30);
-
-  const selectedModel = MODELS.find((m) => m.id === defaultModel);
-  const isPaidDefault = selectedModel?.tier === 'paid';
 
   const handleVerifyPassword = async () => {
     if (!password.trim()) {
@@ -74,7 +51,6 @@ export function SettingsPanel() {
   };
 
   const handleResetSettings = () => {
-    setDefaultModel('gemini-flash');
     setAutoPickThreshold(90);
     setMinSampleSize([5]);
     setSessionTimeout(30);
@@ -112,8 +88,8 @@ export function SettingsPanel() {
                   Session unlocked
                 </p>
                 <p className="mt-0.5 text-xs text-emerald-700/80 dark:text-emerald-200/70">
-                  Your password is verified. Protected actions and paid models are available.
-                </p>
+                                  Your password is verified. Protected actions are available.
+                                </p>
               </div>
             </div>
             <Button
@@ -156,45 +132,11 @@ export function SettingsPanel() {
               )}
             </Button>
             <p className="text-xs text-muted-foreground">
-              Required for: editing knowledge base & using paid models
+              Required for: editing knowledge base
             </p>
           </div>
         )}
       </div>
-
-      {/* Model Settings */}
-      <div className="space-y-3">
-        <div className="flex items-center gap-2">
-          <Bot className="h-4 w-4 text-indigo-500" />
-          <h3 className="text-sm font-semibold text-foreground/90">Default Model</h3>
-        </div>
-        <Select value={defaultModel} onValueChange={setDefaultModel}>
-          <SelectTrigger className="w-full glass-panel-hover">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent className="w-full glass-panel">
-            {MODELS.map((model) => (
-              <SelectItem key={model.id} value={model.id}>
-                <div className="flex items-center gap-2">
-                  <span>{model.name}</span>
-                  <Badge
-                    variant={model.tier === 'paid' ? 'secondary' : 'outline'}
-                    className="text-xs"
-                  >
-                    {model.tier}
-                  </Badge>
-                </div>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {isPaidDefault && (
-          <p className="text-xs text-amber-600 dark:text-amber-400">
-            ⚠️ Paid default — password required on first use
-          </p>
-        )}
-      </div>
-
       {/* Appearance */}
       <div className="space-y-3">
         <div className="flex items-center gap-2">
